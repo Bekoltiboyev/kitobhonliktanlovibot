@@ -1,0 +1,1002 @@
+[
+  {
+    "question": "Martin Iden asari muallifi kim?",
+    "options": {
+      "A": "Ernest Xeminguey",
+      "B": "Mark Tven",
+      "C": "Teodor Drayzer",
+      "D": "Jek London"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Asar qahramoni kimni sevib qoladi?",
+    "options": {
+      "A": "Meri",
+      "B": "Klara",
+      "C": "Rozetti",
+      "D": "Rut"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Martin Iden qaysi kasbni egallashga intiladi?",
+    "options": {
+      "A": "Shifokor",
+      "B": "O‘qituvchi",
+      "C": "Yozuvchi",
+      "D": "Muhandis"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Martin Idenning asosiy maqsadi nima edi?",
+    "options": {
+      "A": "Harbiy bo‘lish",
+      "B": "Sayohat qilish",
+      "C": "Boylik orttirish",
+      "D": "Yozuvchi bo‘lish"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Jek London qaysi davlat yozuvchisi?",
+    "options": {
+      "A": "Angliya",
+      "B": "AQSh",
+      "C": "Fransiya",
+      "D": "Kanada"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Alisher Navoiy qaysi asarning muallifi?",
+    "options": {
+      "A": "Qutadg‘u bilig",
+      "B": "Boburnoma",
+      "C": "Devonu lug‘otit turk",
+      "D": "Xamsa"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Bobur qaysi asarni yozgan?",
+    "options": {
+      "A": "O‘tkan kunlar",
+      "B": "Mehrobdan chayon",
+      "C": "Boburnoma",
+      "D": "Xamsa"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "O‘tkan kunlar romani muallifi kim?",
+    "options": {
+      "A": "Fitrat",
+      "B": "Oybek",
+      "C": "Cho‘lpon",
+      "D": "Abdulla Qodiriy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "O‘tkan kunlar asarining bosh qahramoni kim?",
+    "options": {
+      "A": "Mirzakarim qutidor",
+      "B": "Hoshimjon",
+      "C": "Otabek",
+      "D": "Anvar"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Otabekning sevgilisi kim?",
+    "options": {
+      "A": "Zaynab",
+      "B": "Dilbar",
+      "C": "Ra’no",
+      "D": "Kumush"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Cho‘lponning mashhur romani qaysi?",
+    "options": {
+      "A": "Navoiy",
+      "B": "Qutlug‘ qon",
+      "C": "Kecha va kunduz",
+      "D": "O‘tkan kunlar"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Kecha va kunduz romanining muallifi kim?",
+    "options": {
+      "A": "Oybek",
+      "B": "Cho‘lpon",
+      "C": "Abdulla Qahhor",
+      "D": "G‘afur G‘ulom"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Oybekning mashhur tarixiy romani qaysi?",
+    "options": {
+      "A": "Shum bola",
+      "B": "Dunyoning ishlari",
+      "C": "Navoiy",
+      "D": "Sarob"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Shum bola qissasi muallifi kim?",
+    "options": {
+      "A": "Oybek",
+      "B": "G‘afur G‘ulom",
+      "C": "Cho‘lpon",
+      "D": "Abdulla Qodiriy"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Dunyoning ishlari asari muallifi kim?",
+    "options": {
+      "A": "Said Ahmad",
+      "B": "O‘tkir Hoshimov",
+      "C": "Pirimqul Qodirov",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Ikki eshik orasi romanini kim yozgan?",
+    "options": {
+      "A": "Oybek",
+      "B": "Abdulla Qahhor",
+      "C": "Cho‘lpon",
+      "D": "O‘tkir Hoshimov"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Ufq trilogiyasi muallifi kim?",
+    "options": {
+      "A": "Pirimqul Qodirov",
+      "B": "O‘tkir Hoshimov",
+      "C": "Said Ahmad",
+      "D": "G‘afur G‘ulom"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Yulduzli tunlar romanining muallifi kim?",
+    "options": {
+      "A": "Abdulla Qodiriy",
+      "B": "Cho‘lpon",
+      "C": "Pirimqul Qodirov",
+      "D": "Oybek"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Qutadg‘u bilig asarining muallifi kim?",
+    "options": {
+      "A": "Mahmud Qoshg‘ariy",
+      "B": "Alisher Navoiy",
+      "C": "Yusuf Xos Hojib",
+      "D": "Ahmad Yassaviy"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Devonu lug‘otit turk muallifi kim?",
+    "options": {
+      "A": "Yusuf Xos Hojib",
+      "B": "Ibn Sino",
+      "C": "Beruniy",
+      "D": "Mahmud Qoshg‘ariy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Alpomish qanday asar?",
+    "options": {
+      "A": "Hikoya",
+      "B": "Drama",
+      "C": "Roman",
+      "D": "Doston"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Alpomish dostonining bosh qahramoni kim?",
+    "options": {
+      "A": "Rustam",
+      "B": "Go‘ro‘g‘li",
+      "C": "Avazxon",
+      "D": "Alpomish"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Abdulla Qahhorning mashhur qissasi qaysi?",
+    "options": {
+      "A": "Navoiy",
+      "B": "Yulduzli tunlar",
+      "C": "Sinchalak",
+      "D": "Kecha va kunduz"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Sarob romanining muallifi kim?",
+    "options": {
+      "A": "Oybek",
+      "B": "Said Ahmad",
+      "C": "Cho‘lpon",
+      "D": "Abdulla Qahhor"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Qutlug‘ qon romanini kim yozgan?",
+    "options": {
+      "A": "Abdulla Qodiriy",
+      "B": "Pirimqul Qodirov",
+      "C": "G‘afur G‘ulom",
+      "D": "Oybek"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "O‘zbegim she’rining muallifi kim?",
+    "options": {
+      "A": "Abdulla Oripov",
+      "B": "Muhammad Yusuf",
+      "C": "Cho‘lpon",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Muhammad Yusuf qanday ijodkor sifatida mashhur?",
+    "options": {
+      "A": "Roman yozuvchisi",
+      "B": "Tarixchi",
+      "C": "Shoir",
+      "D": "Dramaturg"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Ruhlar isyoni asarining muallifi kim?",
+    "options": {
+      "A": "Oybek",
+      "B": "Abdulla Oripov",
+      "C": "Muhammad Yusuf",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Sariq devni minib asari muallifi kim?",
+    "options": {
+      "A": "Xudoyberdi To‘xtaboyev",
+      "B": "G‘afur G‘ulom",
+      "C": "O‘tkir Hoshimov",
+      "D": "Said Ahmad"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Sariq devni minib asarining bosh qahramoni kim?",
+    "options": {
+      "A": "Anvar",
+      "B": "Hoshimjon",
+      "C": "Alpomish",
+      "D": "Otabek"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Sehrli qalpoqcha asari muallifi kim?",
+    "options": {
+      "A": "Abdulla Qahhor",
+      "B": "Said Ahmad",
+      "C": "Xudoyberdi To‘xtaboyev",
+      "D": "Oybek"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Navoiy romanining muallifi kim?",
+    "options": {
+      "A": "Abdulla Qodiriy",
+      "B": "Cho‘lpon",
+      "C": "Pirimqul Qodirov",
+      "D": "Oybek"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Mehrobdan chayon romanini kim yozgan?",
+    "options": {
+      "A": "Cho‘lpon",
+      "B": "Oybek",
+      "C": "Abdulla Qahhor",
+      "D": "Abdulla Qodiriy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Mehrobdan chayon asarining bosh qahramoni kim?",
+    "options": {
+      "A": "Hoshimjon",
+      "B": "Otabek",
+      "C": "Martin Iden",
+      "D": "Anvar"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Xamsa nechta dostondan iborat?",
+    "options": {
+      "A": "Uch",
+      "B": "Besh",
+      "C": "To‘rt",
+      "D": "Yetti"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Farhod va Shirin dostoni kimning Xamsasiga kiradi?",
+    "options": {
+      "A": "Oybek",
+      "B": "Alisher Navoiy",
+      "C": "Cho‘lpon",
+      "D": "Bobur"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Layli va Majnun dostoni muallifi kim?",
+    "options": {
+      "A": "G‘afur G‘ulom",
+      "B": "Abdulla Qodiriy",
+      "C": "Alisher Navoiy",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Hayrat ul-abror dostoni muallifi kim?",
+    "options": {
+      "A": "Oybek",
+      "B": "Cho‘lpon",
+      "C": "Bobur",
+      "D": "Alisher Navoiy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Sab’ai sayyor dostoni muallifi kim?",
+    "options": {
+      "A": "Abdulla Qodiriy",
+      "B": "Pirimqul Qodirov",
+      "C": "Alisher Navoiy",
+      "D": "Said Ahmad"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Saddi Iskandariy dostoni muallifi kim?",
+    "options": {
+      "A": "Cho‘lpon",
+      "B": "Alisher Navoiy",
+      "C": "G‘afur G‘ulom",
+      "D": "Oybek"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Lison ut-tayr asarining muallifi kim?",
+    "options": {
+      "A": "Mahmud Qoshg‘ariy",
+      "B": "Yusuf Xos Hojib",
+      "C": "Bobur",
+      "D": "Alisher Navoiy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Mahbub ul-qulub asarini kim yozgan?",
+    "options": {
+      "A": "Oybek",
+      "B": "Alisher Navoiy",
+      "C": "Cho‘lpon",
+      "D": "Abdulla Qahhor"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Muhokamat ul-lug‘atayn asari muallifi kim?",
+    "options": {
+      "A": "Ahmad Yassaviy",
+      "B": "Mahmud Qoshg‘ariy",
+      "C": "Alisher Navoiy",
+      "D": "Bobur"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Bobur qaysi sulolaga asos solgan?",
+    "options": {
+      "A": "Shayboniylar",
+      "B": "Temuriylar",
+      "C": "Qoraxoniylar",
+      "D": "Boburiylar"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Bobur qaysi shaharda tug‘ilgan?",
+    "options": {
+      "A": "Andijon",
+      "B": "Samarqand",
+      "C": "Buxoro",
+      "D": "Xiva"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Mirzo Ulug‘bek kim sifatida mashhur?",
+    "options": {
+      "A": "Shoir",
+      "B": "Me’mor",
+      "C": "Dramaturg",
+      "D": "Astronom va olim"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Ziji Jadidi Kuragoniy asarini kim yaratgan?",
+    "options": {
+      "A": "Beruniy",
+      "B": "Mirzo Ulug‘bek",
+      "C": "Bobur",
+      "D": "Alisher Navoiy"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Ibn Sino qaysi sohada mashhur?",
+    "options": {
+      "A": "Adabiyot",
+      "B": "Me’morchilik",
+      "C": "Tibbiyot",
+      "D": "Musiqa"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Ibn Sinoning mashhur tibbiy asari qaysi?",
+    "options": {
+      "A": "Tib qonunlari",
+      "B": "Qutadg‘u bilig",
+      "C": "Boburnoma",
+      "D": "Xamsa"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Beruniy qaysi fanlarga katta hissa qo‘shgan?",
+    "options": {
+      "A": "Huquq va siyosat",
+      "B": "Adabiyot va musiqa",
+      "C": "Me’morchilik va rassomlik",
+      "D": "Astronomiya va geografiya"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Ahmad Yassaviyning mashhur asari qaysi?",
+    "options": {
+      "A": "Boburnoma",
+      "B": "O‘tkan kunlar",
+      "C": "Xamsa",
+      "D": "Devoni hikmat"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Devoni hikmat asarining muallifi kim?",
+    "options": {
+      "A": "Alisher Navoiy",
+      "B": "Bobur",
+      "C": "Ahmad Yassaviy",
+      "D": "Furqat"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Fitratning asl ismi qanday?",
+    "options": {
+      "A": "Cho‘lpon",
+      "B": "Mahmudxo‘ja Behbudiy",
+      "C": "Abdurauf Fitrat",
+      "D": "Abdulla Qodiriy"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Abdurauf Fitrat qaysi harakat vakili?",
+    "options": {
+      "A": "Jadidchilik",
+      "B": "Naturalizm",
+      "C": "Romantizm",
+      "D": "Klassitsizm"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Mahmudxo‘ja Behbudiy qaysi yo‘nalish vakili?",
+    "options": {
+      "A": "Astronomiya",
+      "B": "Jadidchilik",
+      "C": "Tibbiyot",
+      "D": "Harbiylik"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Abdulla Avloniy qaysi asari bilan mashhur?",
+    "options": {
+      "A": "Turkiy guliston yoxud axloq",
+      "B": "Boburnoma",
+      "C": "Xamsa",
+      "D": "Navoiy"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Turkiy guliston yoxud axloq muallifi kim?",
+    "options": {
+      "A": "Cho‘lpon",
+      "B": "Behbudiy",
+      "C": "Fitrat",
+      "D": "Abdulla Avloniy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Cho‘lponning asl ismi kim?",
+    "options": {
+      "A": "Abdulla Qodiriy",
+      "B": "Abdurauf Fitrat",
+      "C": "Abdulhamid Sulaymon o‘g‘li",
+      "D": "Abdulla Avloniy"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Sen yetim emassan she’rining muallifi kim?",
+    "options": {
+      "A": "Muhammad Yusuf",
+      "B": "G‘afur G‘ulom",
+      "C": "Abdulla Oripov",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "O‘zbekiston Davlat madhiyasi matni muallifi kim?",
+    "options": {
+      "A": "G‘afur G‘ulom",
+      "B": "Muhammad Yusuf",
+      "C": "Abdulla Oripov",
+      "D": "Erkin Vohidov"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "O‘zbekiston Davlat madhiyasi musiqasi muallifi kim?",
+    "options": {
+      "A": "Sherali Jo‘rayev",
+      "B": "Mutal Burhonov",
+      "C": "Mansur Toshmatov",
+      "D": "Komiljon Otaniyozov"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Jadidchilik harakati nimaga chaqirgan?",
+    "options": {
+      "A": "Savdoni to‘xtatishga",
+      "B": "Sayohatga",
+      "C": "Ma’rifat va taraqqiyotga",
+      "D": "Urushga"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Avlodlar dovoni asari muallifi kim?",
+    "options": {
+      "A": "Said Ahmad",
+      "B": "O‘tkir Hoshimov",
+      "C": "Pirimqul Qodirov",
+      "D": "Oybek"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Abdulla Qahhorning hikoyalaridan biri qaysi?",
+    "options": {
+      "A": "Boburnoma",
+      "B": "O‘g‘ri",
+      "C": "Alpomish",
+      "D": "O‘zbegim"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "O‘g‘ri hikoyasining muallifi kim?",
+    "options": {
+      "A": "Cho‘lpon",
+      "B": "G‘afur G‘ulom",
+      "C": "Abdulla Qahhor",
+      "D": "Oybek"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Roman nima?",
+    "options": {
+      "A": "Qisqa she’r",
+      "B": "Topishmoq",
+      "C": "Maqol",
+      "D": "Katta hajmdagi nasriy asar"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Hikoya nima?",
+    "options": {
+      "A": "Ilmiy maqola",
+      "B": "Dostonlar turkumi",
+      "C": "Lug‘at",
+      "D": "Kichik hajmdagi nasriy asar"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Doston qanday janr?",
+    "options": {
+      "A": "Maqol",
+      "B": "Topishmoq",
+      "C": "Faqat drama",
+      "D": "Epik-she’riy yoki nasriy yirik asar"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Maqol nima?",
+    "options": {
+      "A": "Xalq donishmandligini ifodalovchi qisqa hikmat",
+      "B": "Tarixiy hujjat",
+      "C": "Uzun roman",
+      "D": "Drama"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Mutolaa so‘zining ma’nosi nima?",
+    "options": {
+      "A": "Kitob sotish",
+      "B": "Kitob bezash",
+      "C": "Kitob o‘qish",
+      "D": "Kitob yozish"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Kitob o‘qishning asosiy foydalaridan biri nima?",
+    "options": {
+      "A": "Bilim va tafakkurni oshirish",
+      "B": "Bilimni kamaytirish",
+      "C": "Faqat uxlash",
+      "D": "Vaqtni bekor o‘tkazish"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "O‘zbek adabiyotining buyuk shoiri kim?",
+    "options": {
+      "A": "Alisher Navoiy",
+      "B": "Ernest Xeminguey",
+      "C": "Mark Tven",
+      "D": "Jek London"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Boburnoma qanday asar?",
+    "options": {
+      "A": "Drama",
+      "B": "Tarixiy-memuar asar",
+      "C": "Doston",
+      "D": "Ertak"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Qutadg‘u bilig qaysi tilda yaratilgan?",
+    "options": {
+      "A": "Qadimgi turkiy tilda",
+      "B": "Yunon tilida",
+      "C": "Fransuz tilida",
+      "D": "Lotin tilida"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Devonu lug‘otit turk qanday asar?",
+    "options": {
+      "A": "Roman",
+      "B": "Doston",
+      "C": "Drama",
+      "D": "Turkiy tillar lug‘ati"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "O‘tkan kunlar romanida Kumush kim?",
+    "options": {
+      "A": "Martinning do‘sti",
+      "B": "Otabekning sevgilisi",
+      "C": "Anvarning onasi",
+      "D": "Hoshimjonning singlisi"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Alpomish dostonida Alpomishning sevgilisi kim?",
+    "options": {
+      "A": "Rut",
+      "B": "Zaynab",
+      "C": "Kumush",
+      "D": "Barchinoy"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Go‘ro‘g‘li kim?",
+    "options": {
+      "A": "Xalq dostoni qahramoni",
+      "B": "Shoir",
+      "C": "Roman muallifi",
+      "D": "Tarixchi"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Erkin Vohidovning mashhur asarlaridan biri qaysi?",
+    "options": {
+      "A": "O‘zbegim",
+      "B": "Boburnoma",
+      "C": "O‘tkan kunlar",
+      "D": "Alpomish"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Abdulla Oripovning mashhur asarlaridan biri qaysi?",
+    "options": {
+      "A": "Sinchalak",
+      "B": "Sarob",
+      "C": "Shum bola",
+      "D": "Ruhlar isyoni"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Muhammad Yusuf ijodida qaysi mavzu ko‘p uchraydi?",
+    "options": {
+      "A": "Harbiy texnika",
+      "B": "Matematika",
+      "C": "Vatan va insoniy tuyg‘ular",
+      "D": "Kosmos texnologiyasi"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Xudoyberdi To‘xtaboyev asarlari ko‘proq kimlarga mo‘ljallangan?",
+    "options": {
+      "A": "Faqat olimlarga",
+      "B": "Bolalar va o‘smirlar",
+      "C": "Faqat siyosatchilarga",
+      "D": "Faqat harbiylarga"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "O‘tkir Hoshimov ijodida qaysi mavzu muhim?",
+    "options": {
+      "A": "Insoniylik va hayot",
+      "B": "Faqat sport",
+      "C": "Faqat astronomiya",
+      "D": "Faqat texnika"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Said Ahmad qaysi janrlarda ijod qilgan?",
+    "options": {
+      "A": "Faqat ilmiy maqola",
+      "B": "Hikoya, qissa va roman",
+      "C": "Faqat doston",
+      "D": "Faqat lug‘at"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Oybekning asl ismi kim?",
+    "options": {
+      "A": "Abdulhamid Sulaymon o‘g‘li",
+      "B": "Abdulla Avloniy",
+      "C": "Abdurauf Fitrat",
+      "D": "Musa Toshmuhammad o‘g‘li"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "G‘afur G‘ulom qaysi shaharda tug‘ilgan?",
+    "options": {
+      "A": "Buxoro",
+      "B": "Samarqand",
+      "C": "Toshkent",
+      "D": "Xiva"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Abdulla Qodiriy qaysi asari bilan mashhur?",
+    "options": {
+      "A": "O‘tkan kunlar",
+      "B": "Xamsa",
+      "C": "Boburnoma",
+      "D": "Devoni hikmat"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Cho‘lpon qaysi yo‘nalish bilan bog‘liq?",
+    "options": {
+      "A": "Fransuz klassitsizmi",
+      "B": "Rim adabiyoti",
+      "C": "Jadid adabiyoti",
+      "D": "Qadimgi yunon adabiyoti"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Kitobxonlik tanlovida eng yaxshi tayyorgarlik usuli qaysi?",
+    "options": {
+      "A": "Faqat nomini bilish",
+      "B": "Faqat javoblarni yodlash",
+      "C": "Asarni diqqat bilan o‘qib, mazmunini tushunish",
+      "D": "Kitobni o‘qimaslik"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Onlayn testda savolni tushunish nima uchun muhim?",
+    "options": {
+      "A": "Variantlarni ko‘paytirish uchun",
+      "B": "To‘g‘ri javobni aniqlash uchun",
+      "C": "Savolni tashlab ketish uchun",
+      "D": "Vaqtni cho‘zish uchun"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Mutolaa insonda nimani rivojlantiradi?",
+    "options": {
+      "A": "Faqat jismoniy kuchni",
+      "B": "Faqat bo‘y o‘sishini",
+      "C": "Faqat tezlikni",
+      "D": "Tafakkur va dunyoqarashni"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Kitob tanlashda eng muhim mezonlardan biri nima?",
+    "options": {
+      "A": "Faqat hajmi",
+      "B": "Mazmuni va ishonchliligi",
+      "C": "Faqat narxi",
+      "D": "Faqat muqovasi"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Adabiy qahramon nima?",
+    "options": {
+      "A": "Nashriyot nomi",
+      "B": "Muallifning rasmi",
+      "C": "Asardagi obraz",
+      "D": "Kitobning narxi"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Muallif kim?",
+    "options": {
+      "A": "Kitob sotuvchisi",
+      "B": "O‘quvchi",
+      "C": "Nashriyot binosi",
+      "D": "Asarni yaratgan ijodkor"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "Asarning mavzusi nima?",
+    "options": {
+      "A": "Muallifning yoshi",
+      "B": "Asarda yoritilgan asosiy masala",
+      "C": "Kitobning narxi",
+      "D": "Sahifalar soni"
+    },
+    "correct": "B"
+  },
+  {
+    "question": "Asarning g‘oyasi nima?",
+    "options": {
+      "A": "Muallif ilgari surgan asosiy fikr",
+      "B": "Sahifa raqami",
+      "C": "Nashriyot nomi",
+      "D": "Kitob muqovasi"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Kitobxonlikning jamiyat uchun foydasi nima?",
+    "options": {
+      "A": "Ma’rifatli va bilimli avlodni shakllantirish",
+      "B": "Vaqtni bekor sarflash",
+      "C": "Savodsizlikni oshirish",
+      "D": "Bilimni kamaytirish"
+    },
+    "correct": "A"
+  },
+  {
+    "question": "Tanlov ishtirokchisi asarni qanday o‘qishi kerak?",
+    "options": {
+      "A": "Faqat oxirgi sahifasini",
+      "B": "Faqat rasmlarini",
+      "C": "Faqat sarlavhasini",
+      "D": "Diqqat bilan va tushunib"
+    },
+    "correct": "D"
+  },
+  {
+    "question": "O‘zbek adabiyotida roman janrining mashhur namunasini toping.",
+    "options": {
+      "A": "Devoni hikmat",
+      "B": "Maqollar",
+      "C": "O‘tkan kunlar",
+      "D": "Alpomish"
+    },
+    "correct": "C"
+  },
+  {
+    "question": "Alisher Navoiyning tug‘ilgan shahri qaysi?",
+    "options": {
+      "A": "Andijon",
+      "B": "Hirot",
+      "C": "Buxoro",
+      "D": "Xiva"
+    },
+    "correct": "B"
+  }
+]

@@ -1,0 +1,29 @@
+# Virtual muhit va kesh
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Maxfiy ma'lumotlar va baza
+.env
+*.db
+*.sqlite
+*.sqlite3
+bot_database.db
+
+# Kitob va dinamik fayllar (mualliflik huquqi va katta hajmdagi fayllar)
+data/book.pdf
+data/*.pdf
+*.pdf
+
+# Tizim va muharrir sozlamalari
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Loglar va vaqtinchalik fayllar
+*.log
+tmp/
+temp/
