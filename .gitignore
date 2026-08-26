@@ -27,3 +27,6 @@ data/*.pdf
 *.log
 tmp/
 temp/
+*.sql
+backup_old_files/
+venv_*/

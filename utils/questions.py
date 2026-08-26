@@ -100,7 +100,9 @@ def parse_excel_questions(file_path: str) -> tuple[bool, str, int]:
         if not parsed_questions:
             return False, "Faylda hech qanday savol topilmadi.", 0
 
-        os.makedirs(os.path.dirname(QUESTIONS_FILE), exist_ok=True)
+        target_dir = os.path.dirname(QUESTIONS_FILE)
+        if target_dir:  # QUESTIONS_FILE papkasiz, bevosita fayl nomi bo'lsa ham xato bermasligi uchun
+            os.makedirs(target_dir, exist_ok=True)
         with open(QUESTIONS_FILE, "w", encoding="utf-8") as f:
             json.dump(parsed_questions, f, ensure_ascii=False, indent=2)
 

@@ -1,6 +1,5 @@
 import logging
 import inspect
-import json
 import random
 import datetime as dt
 from aiogram import Bot
@@ -11,7 +10,7 @@ import database as db
 from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS
 from utils.questions import load_questions
 import keyboards as kb
-from handlers.test import send_question
+from handlers.test import send_question, force_finish_user
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +37,13 @@ async def _start_user_test_direct(bot: Bot, tg_id: int, user_id: int, questions:
         sample_size = min(TOTAL_QUESTIONS, total_q)
         order = random.sample(range(total_q), sample_size)
 
-        now = dt.datetime.now(TZ_TASHKENT)
-        await db.create_or_reset_result(
-            user_id=user_id,
-            question_order=order,
-            started_at=now.isoformat()
-        )
+        # DIQQAT: db.start_test() ichida started_at avtomatik va TO'G'RI turda
+        # (epoch son — time.time()) saqlanadi. Oldin bu yerda alohida
+        # db.create_or_reset_result(..., started_at=now.isoformat()) chaqirilar
+        # edi — bu ISO matn edi, lekin test.py va pdf_generator.py buni SON
+        # sifatida ishlatadi (masalan finished_at - started_at). Natijada
+        # test vaqti tekshiruvi va PDF hisobot yaratish xato berardi.
+        await db.start_test(user_id, order)
 
         await bot.send_message(
             chat_id=tg_id,
@@ -93,8 +93,33 @@ async def _start_test_for_all(bot: Bot):
 
 
 async def _end_test_for_all(bot: Bot):
+    """
+    Test vaqti tugaganda hali ulgurmagan (in_progress) ishtirokchilarni
+    majburiy yakunlaydi.
+
+    DIQQAT: oldin bu yerda db.force_finish_all_active_tests() deb bitta
+    "sehrli" DB funksiyasi chaqirilar edi — lekin bunday funksiya
+    database.py da yo'q edi, VA muhimi, faqat bazani yangilash yetarli
+    emas: har bir foydalanuvchiga o'z natija PDF fayli ham yuborilishi
+    kerak. Buni faqat bot orqali (Telegram xabar/fayl yuborish) qilish
+    mumkin, database.py buni bajara olmaydi. Shu sababli endi bu yerda
+    test.py dagi force_finish_user() chaqirilib, har bir ulgurmagan
+    foydalanuvchiga to'g'ri tarzda: natija hisoblanadi, bazaga yoziladi,
+    VA shaxsiy PDF fayli ham yuboriladi.
+    """
     logger.info(">>> TEST YAKUNLANDI (VAQT TUGADI) <<<")
-    await db.force_finish_all_active_tests()
+    in_progress = await db.get_all_in_progress_tests()
+    if not in_progress:
+        logger.info("Vaqt tugaganda hech kim 'in_progress' holatida emas edi.")
+        return
+
+    for row in in_progress:
+        try:
+            await force_finish_user(bot, row["user_id"], row["telegram_id"])
+        except Exception as e:
+            logger.error(f"Majburiy yakunlashda xatolik (user_id={row['user_id']}): {e}")
+
+    logger.info(f"{len(in_progress)} ta ishtirokchi majburiy yakunlandi.")
 
 
 async def reschedule_test_jobs(scheduler: AsyncIOScheduler, bot: Bot, test_time: dt.datetime):

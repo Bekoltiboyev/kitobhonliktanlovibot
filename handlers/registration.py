@@ -1,3 +1,5 @@
+import re
+
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
@@ -10,6 +12,32 @@ from utils.subscription import is_user_subscribed
 from config import PRIZE_TEXT
 
 router = Router()
+
+# Faqat lotin, krill va o'zbekcha maxsus harflar (o', g' uchun turli apostrof
+# ko'rinishlari), bo'shliq va defis (qo'sh familiya uchun) ruxsat etiladi.
+# Raqam yoki boshqa belgilar (!, @, #, $ va h.k.) butunlay taqiqlanadi.
+FULLNAME_PATTERN = re.compile(r"^[A-Za-zА-Яа-яЎўҚқҒғҲҳ'ʻʼ`\-\s]+$")
+MIN_WORD_LENGTH = 2
+
+
+def validate_fullname(fullname: str) -> tuple[bool, str]:
+    """
+    Ism-familiyani tekshiradi. (True, "") yoki (False, "xato sababi") qaytaradi.
+    """
+    words = [w for w in fullname.split() if w]
+
+    if len(fullname) < 5:
+        return False, "Ism-familiya juda qisqa."
+    if len(words) < 2:
+        return False, "Kamida ism va familiyangizni (2 so'z) kiriting."
+    if any(ch.isdigit() for ch in fullname):
+        return False, "Ism-familiyada raqam bo'lishi mumkin emas."
+    if not FULLNAME_PATTERN.match(fullname):
+        return False, "Ism-familiyada faqat harflar bo'lishi kerak (maxsus belgilar, emoji taqiqlanadi)."
+    if any(len(w) < MIN_WORD_LENGTH for w in words):
+        return False, "Ism yoki familiya juda qisqa yozilgan."
+
+    return True, ""
 
 
 async def _show_registration_start(message: Message, state: FSMContext):
@@ -82,9 +110,17 @@ async def cb_check_sub(callback: CallbackQuery, state: FSMContext, bot: Bot):
 @router.message(Registration.waiting_fullname)
 async def process_fullname(message: Message, state: FSMContext):
     fullname = message.text.strip() if message.text else ""
-    if len(fullname.split()) < 2 or len(fullname) < 5:
-        await message.answer("Iltimos to'liq ism-familiyangizni to'g'ri kiriting.")
+
+    is_valid, error_reason = validate_fullname(fullname)
+    if not is_valid:
+        await message.answer(
+            f"❗️ {error_reason}\n\n"
+            "Iltimos, to'liq ism-familiyangizni faqat harflardan foydalanib kiriting.\n"
+            "Masalan: <b>Aliyev Vali Aliyevich</b>",
+            parse_mode="HTML",
+        )
         return
+
     await state.update_data(fullname=fullname)
     await state.set_state(Registration.waiting_phone)
     await message.answer(

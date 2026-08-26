@@ -1,4 +1,6 @@
 import os
+import hashlib
+import logging
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, Message, FSInputFile
 from aiogram.fsm.context import FSMContext
@@ -8,7 +10,10 @@ import keyboards as kb
 from states import PaymentFlow
 from config import PAYMENT_CARD_NUMBER, PAYMENT_CARD_OWNER, ADMIN_GROUP_ID, BOOK_FILE_PATH
 
+logger = logging.getLogger(__name__)
 router = Router()
+
+MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 @router.callback_query(F.data == "pay_now")
@@ -23,7 +28,7 @@ async def cb_pay_now(callback: CallbackQuery, state: FSMContext):
         return
 
     await state.set_state(PaymentFlow.waiting_receipt)
-    
+
     text = (
         "💳 <b>TO‘LOV MA’LUMOTLARI VA REKVIZITLAR</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -34,8 +39,9 @@ async def cb_pay_now(callback: CallbackQuery, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "📥 <b>Keyingi qadam:</b>\n"
         "1. Yuqoridagi kartaga to‘lovni amalga oshiring.\n"
-        "2. To‘lov chekini ushbu botga <b>rasm (JPG/PNG)</b> yoki <b>PDF hujjat</b> shaklida yuboring.\n"
-        "2. To‘lov cheki tasdiqlangandan so'ng <b>elektron kitob</b> yuboriladi\n\n"
+        "2. To‘lov chekini ushbu botga <b>rasm (JPG/PNG)</b> yoki <b>PDF hujjat</b> shaklida yuboring "
+        "(fayl hajmi <b>5 MB</b> dan oshmasligi kerak).\n"
+        "3. To‘lov cheki tasdiqlangandan so'ng <b>elektron kitob</b> yuboriladi\n\n"
         "⚠️ <i>Chek aniq, summa va tranzaksiya vaqti ko‘ringan bo‘lishi shart.</i>\n\n"
         "🚫 Bekor qilish uchun: /cancel"
     )
@@ -50,17 +56,47 @@ async def process_receipt(message: Message, state: FSMContext, bot: Bot):
         return
 
     if message.photo:
-        file_id = message.photo[-1].file_id
+        largest_photo = message.photo[-1]
+        if largest_photo.file_size and largest_photo.file_size > MAX_RECEIPT_SIZE_BYTES:
+            await message.answer(
+                "⚠️ Rasm hajmi juda katta (5 MB dan oshmasligi kerak). "
+                "Iltimos, hajmi kichikroq rasm yuboring yoki sifatini pasaytirib qayta yuboring."
+            )
+            return
+        file_id = largest_photo.file_id
         file_type = "photo"
     else:
         mime = (message.document.mime_type or "")
         if not (mime == "application/pdf" or mime.startswith("image/")):
-            await message.answer("Faqat rasm yoki PDF formatidagi chek qabul qilinadi.")
+            await message.answer(
+                "❌ Faqat rasm (JPG/PNG) yoki PDF formatidagi chek qabul qilinadi. "
+                "Boshqa fayl turlari (video, arxiv, matn va h.k.) qabul qilinmaydi."
+            )
+            return
+        if message.document.file_size and message.document.file_size > MAX_RECEIPT_SIZE_BYTES:
+            await message.answer(
+                "⚠️ Fayl hajmi juda katta (5 MB dan oshmasligi kerak). "
+                "Iltimos, hajmi kichikroq fayl yuboring."
+            )
             return
         file_id = message.document.file_id
         file_type = "document"
 
-    payment_id = await db.create_payment(user["id"], file_id, file_type)
+    # ---- Faylning "raqamli izi" (hash) ni hisoblaymiz — takroriy/soxta ----
+    # chekni aniqlash uchun. Fayl mazmunining o'zi (piksellari) solishtiriladi,
+    # Telegram file_id emas — chunki bitta faylni ikki marta yuborsangiz ham
+    # file_id boshqacha bo'lishi mumkin, lekin mazmuni bir xil bo'lsa hash
+    # ham bir xil chiqadi.
+    file_hash = None
+    try:
+        file_bytes_io = await bot.download(file_id)
+        file_hash = hashlib.sha256(file_bytes_io.read()).hexdigest()
+    except Exception as e:
+        logger.warning(f"[RECEIPT HASH] fayl yuklab olib hash hisoblashda xato: {e}")
+        # Hash hisoblab bo'lmasa ham, chekning o'zini rad etmaymiz — faqat
+        # takroriy tekshiruv shu chek uchun o'tkazib yuboriladi.
+
+    payment_id = await db.create_payment(user["id"], file_id, file_type, file_hash)
     await state.clear()
 
     caption = (
@@ -70,6 +106,19 @@ async def process_receipt(message: Message, state: FSMContext, bot: Bot):
         f"Telegram ID: <code>{user['telegram_id']}</code>\n"
         f"Telefon: {user['phone']}"
     )
+
+    # ---- Takroriy chek tekshiruvi ----
+    if file_hash:
+        duplicates = await db.find_duplicate_receipts(file_hash, exclude_user_id=user["id"])
+        if duplicates:
+            warn_lines = ["\n\n⚠️⚠️⚠️ <b>DIQQAT: XUDDI SHU CHEK BOSHQA FOYDALANUVCHI(LAR)DAN HAM KELGAN!</b>"]
+            for d in duplicates:
+                status_uz = {"pending": "kutilmoqda", "approved": "tasdiqlangan"}.get(d["status"], d["status"])
+                warn_lines.append(
+                    f"  • {d['fullname']} (ID: <code>{d['telegram_id']}</code>) — holati: {status_uz}"
+                )
+            warn_lines.append("\n👉 Ehtiyot bo'ling, bu soxta/qayta ishlatilgan chek bo'lishi mumkin!")
+            caption += "\n".join(warn_lines)
 
     if file_type == "photo":
         sent = await bot.send_photo(
@@ -91,7 +140,15 @@ async def process_receipt(message: Message, state: FSMContext, bot: Bot):
 
 @router.message(PaymentFlow.waiting_receipt)
 async def process_receipt_invalid(message: Message):
-    await message.answer("Iltimos, to'lov chekini rasm yoki PDF ko'rinishida yuboring. Bekor qilish uchun: /cancel")
+    # Bu handler PaymentFlow.waiting_receipt holatida F.photo yoki F.document
+    # bo'lmagan HAR QANDAY boshqa xabar turi uchun ishga tushadi — ya'ni matn,
+    # video, ovozli xabar, sticker, joylashuv va hokazolar shu yerda "chek
+    # sifatida qabul qilinmadi" deb rad etiladi.
+    await message.answer(
+        "❌ Faqat rasm yoki PDF formatidagi chek qabul qilinadi (hajmi 5 MB dan oshmasin). "
+        "Boshqa hech qanday fayl turi qabul qilinmaydi.\n\n"
+        "Bekor qilish uchun: /cancel"
+    )
 
 
 @router.callback_query(F.data == "download_book")

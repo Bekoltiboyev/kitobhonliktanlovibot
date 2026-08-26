@@ -11,6 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import database as db
 from config import BOT_TOKEN, TZ_TASHKENT
 from handlers import registration, contest, payment, admin, test, leaderboard
+from handlers import registration, contest, payment, admin, test, leaderboard, livescreen  
 from utils.scheduler import setup_scheduler, reschedule_test_jobs
 
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ async def main():
     dp.include_router(admin.router)
     dp.include_router(test.router)
     dp.include_router(leaderboard.router)
+    dp.include_router(livescreen.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Bot ishga tushdi...")
