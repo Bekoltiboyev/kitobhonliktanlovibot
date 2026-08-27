@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import inspect
 import random
@@ -60,6 +61,21 @@ async def _start_user_test_direct(bot: Bot, tg_id: int, user_id: int, questions:
 
 
 async def _start_test_for_all(bot: Bot):
+    """
+    Barcha ishtirokchilarga test boshlanish xabarini yuboradi.
+
+    DIQQAT — MUHIM O'ZGARISH: oldin bu funksiya ishtirokchilarga xabarni
+    KETMA-KET (bittadan-bittaga) yuborardi. Ko'p ishtirokchi (masalan
+    800 kishi) bo'lganda, bu oxirgi ishtirokchiga xabar yetib borishi
+    BIRINCHI ishtirokchidan bir necha DAQIQA kech qolishiga sabab bo'lardi
+    — bu adolatsizlik (kim oldin xabar olsa, testga tayyorlanish uchun
+    ko'proq vaqtga ega bo'ladi).
+
+    Endi xabarlar PARALLEL, lekin nazorat ostida (bir vaqtning o'zida
+    ko'pi bilan MAX_CONCURRENT_SENDS tasi) yuboriladi — bu Telegram
+    serverining "juda tez-tez xabar yubormang" cheklovini (rate limit)
+    buzmagan holda, jarayonni sezilarli tezlashtiradi.
+    """
     logger.info(">>> TEST BARCHA ISHTIROKCHILAR UCHUN BOSHLANMOQDA <<<")
     participants = await db.get_all_participants()
     questions = load_questions()
@@ -72,24 +88,22 @@ async def _start_test_for_all(bot: Bot):
         logger.warning("Bazada ishtirokchilar mavjud emas.")
         return
 
-    for p in participants:
-        try:
-            user_id = p["user_id"] if "user_id" in p.keys() else p[1]
+    MAX_CONCURRENT_SENDS = 20  # bir vaqtda ko'pi bilan shuncha xabar yuboriladi
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_SENDS)
 
-            user = await db.get_user_by_id(user_id)
-            if not user:
-                continue
+    async def _send_one(p):
+        async with semaphore:
+            try:
+                user_id = p["user_id"] if "user_id" in p.keys() else p[1]
+                user = await db.get_user_by_id(user_id)
+                if not user or user["is_blocked"]:
+                    return
+                await _start_user_test_direct(bot, user["telegram_id"], user["id"], questions)
+            except Exception as e:
+                logger.error(f"Foydalanuvchiga test yuborishda xatolik: {e}")
 
-            if user["is_blocked"]:
-                continue
-
-            tg_id = user["telegram_id"]
-            u_id = user["id"]
-
-            await _start_user_test_direct(bot, tg_id, u_id, questions)
-
-        except Exception as e:
-            logger.error(f"Foydalanuvchiga test yuborishda xatolik: {e}")
+    await asyncio.gather(*(_send_one(p) for p in participants))
+    logger.info(f">>> {len(participants)} TA ISHTIROKCHIGA TEST BOSHLANISH XABARI YUBORILDI <<<")
 
 
 async def _end_test_for_all(bot: Bot):
