@@ -112,6 +112,12 @@ async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: in
     await bot.send_message(
         telegram_id, text, parse_mode="HTML",
         reply_markup=kb.question_kb(step_index, user_options),
+        # protect_content=True — Telegram darajasida forward qilish va
+        # "Copy" (nusxalash) tugmasini o'chiradi. Bu ekran suratini olishning
+        # oldini ololmaydi, lekin savol matnini bir tugma bosib boshqa
+        # do'stiga yuborib/nusxalab yuborishni sezilarli qiyinlashtiradi —
+        # xuddi kitob fayli uchun ishlatilgan himoyaning o'zi.
+        protect_content=True,
     )
 
 
@@ -232,6 +238,9 @@ async def finalize_user_test(bot: Bot, user_id: int, telegram_id: int):
             await bot.send_document(
                 telegram_id, FSInputFile(path),
                 caption="✅ Test yakunlandi! Natijangiz ilova qilingan hisobotda.",
+                # Natija hisobotida to'g'ri javoblar ham ko'rinadi — bu ham
+                # tarqatilmasligi uchun himoyalanadi.
+                protect_content=True,
             )
         except Exception:
             pass
