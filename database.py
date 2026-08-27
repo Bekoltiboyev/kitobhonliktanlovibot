@@ -298,7 +298,7 @@ async def review_payment(payment_id: int, status: str, admin_id: int = None):
 async def get_pending_payments():
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT p.*, u.full_name AS fullname, u.phone, u.telegram_id
+            SELECT p.*, u.full_name AS fullname, u.username, u.phone, u.telegram_id
             FROM payments p JOIN users u ON p.user_id = u.id
             WHERE p.status = 'pending' ORDER BY p.created_at ASC
         """)

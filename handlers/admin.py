@@ -12,7 +12,7 @@ from aiogram.fsm.context import FSMContext
 import database as db
 import keyboards as kb
 from states import AdminFlow
-from config import ADMIN_IDS, TZ_TASHKENT
+from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT
 from utils.questions import parse_excel_questions
 
 router = Router()
@@ -499,3 +499,60 @@ async def process_block_reason(message: Message, state: FSMContext, bot: Bot):
 #         f"📌 <b>Holat:</b> finished (Yakunlangan)",
 #         parse_mode="HTML"
 #     )
+
+
+# ---------- HALI TASDIQLANMAGAN CHEKLARNI QAYTA CHIQARISH ----------
+#
+# MUAMMO: agar adminlar guruhida kimdir ko'plab xabarni birdan tanlab
+# o'chirsa (masalan Telegram'ning "bir nechtasini tanlash" funksiyasi
+# orqali), hali "kutilmoqda" (pending) holatidagi cheklar ham
+# ko'rinishdan yo'qolib qolishi mumkin. Chekning o'zi (fayl, foydalanuvchi
+# ma'lumoti, holati) BAZADA saqlanib qoladi — faqat Telegramdagi xabar
+# yo'qoladi. /pending buyrug'i shu "yo'qolgan" cheklarni bazadan qidirib,
+# ularni QAYTA, xuddi yangi kelgandek, tugmalari bilan birga chiqarib
+# beradi — hech qanday ma'lumot yo'qolmaydi.
+
+
+@router.message(Command("pending"))
+async def cmd_pending(message: Message, bot: Bot):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    pending = await db.get_pending_payments()
+    if not pending:
+        await message.answer("✅ Hozircha kutilayotgan (tasdiqlanmagan) chek yo'q.")
+        return
+
+    await message.answer(
+        f"🔁 {len(pending)} ta kutilayotgan chek topildi, qaytadan chiqarilmoqda..."
+    )
+
+    for p in pending:
+        phone_raw = str(p.get("phone") or "").strip()
+        phone_display = phone_raw if phone_raw.startswith("+") else f"+{phone_raw}"
+        caption = (
+            "🧾 <b>To'lov cheki (qayta chiqarildi)</b>\n\n"
+            f"F.I.Sh: {p['fullname']}\n"
+            f"Username: {'@' + p['username'] if p.get('username') else '-'}\n"
+            f"Telegram ID: <code>{p['telegram_id']}</code>\n"
+            f"Telefon: {phone_display}"
+        )
+        try:
+            if p["file_type"] == "photo":
+                sent = await bot.send_photo(
+                    ADMIN_GROUP_ID, p["receipt_file_id"], caption=caption, parse_mode="HTML",
+                    reply_markup=kb.admin_review_kb(p["id"]),
+                )
+            else:
+                sent = await bot.send_document(
+                    ADMIN_GROUP_ID, p["receipt_file_id"], caption=caption, parse_mode="HTML",
+                    reply_markup=kb.admin_review_kb(p["id"]),
+                )
+            await db.set_payment_admin_message(p["id"], sent.message_id)
+        except Exception as e:
+            await message.answer(
+                f"⚠️ {p['fullname']} (ID: {p['telegram_id']}) ning chekini qayta chiqarishda "
+                f"xatolik: {e}"
+            )
+
+    await message.answer("✅ Barcha kutilayotgan cheklar qayta chiqarildi.")
