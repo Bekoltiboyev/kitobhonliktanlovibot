@@ -2,6 +2,7 @@ import os
 import hashlib
 import logging
 from aiogram import Router, F, Bot
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, FSInputFile
 from aiogram.fsm.context import FSMContext
 
@@ -47,6 +48,19 @@ async def cb_pay_now(callback: CallbackQuery, state: FSMContext):
     )
 
     await callback.message.answer(text, parse_mode="HTML")
+
+
+# DIQQAT: bu handler process_receipt/process_receipt_invalid dan OLDIN
+# ro'yxatdan o'tkazilishi shart — aks holda "/cancel" matni oddiy (chek
+# bo'lmagan) xabar sifatida process_receipt_invalid tomonidan "rad etilib",
+# foydalanuvchi holatdan chiqa olmay qolardi.
+@router.message(PaymentFlow.waiting_receipt, Command("cancel"))
+async def cmd_cancel_payment(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "❌ To'lov jarayoni bekor qilindi.\n"
+        "Qayta boshlash uchun \"🎯 Tanlovda ishtirok etish\" tugmasini bosing."
+    )
 
 
 @router.message(PaymentFlow.waiting_receipt, F.photo | F.document)

@@ -1,7 +1,7 @@
 import re
 
 from aiogram import Router, F, Bot
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
@@ -9,35 +9,15 @@ import database as db
 import keyboards as kb
 from states import Registration
 from utils.subscription import is_user_subscribed
-from config import PRIZE_TEXT
+from config import PRIZE_TEXT, ADMIN_IDS
 
 router = Router()
 
-# Faqat lotin, krill va o'zbekcha maxsus harflar (o', g' uchun turli apostrof
-# ko'rinishlari), bo'shliq va defis (qo'sh familiya uchun) ruxsat etiladi.
-# Raqam yoki boshqa belgilar (!, @, #, $ va h.k.) butunlay taqiqlanadi.
 FULLNAME_PATTERN = re.compile(r"^[A-Za-zА-Яа-яЎўҚқҒғҲҳ'ʻʼ`\-\s]+$")
 MIN_WORD_LENGTH = 2
 
-
-def validate_fullname(fullname: str) -> tuple[bool, str]:
-    """
-    Ism-familiyani tekshiradi. (True, "") yoki (False, "xato sababi") qaytaradi.
-    """
-    words = [w for w in fullname.split() if w]
-
-    if len(fullname) < 5:
-        return False, "Ism-familiya juda qisqa."
-    if len(words) < 2:
-        return False, "Kamida ism va familiyangizni (2 so'z) kiriting."
-    if any(ch.isdigit() for ch in fullname):
-        return False, "Ism-familiyada raqam bo'lishi mumkin emas."
-    if not FULLNAME_PATTERN.match(fullname):
-        return False, "Ism-familiyada faqat harflar bo'lishi kerak (maxsus belgilar, emoji taqiqlanadi)."
-    if any(len(w) < MIN_WORD_LENGTH for w in words):
-        return False, "Ism yoki familiya juda qisqa yozilgan."
-
-    return True, ""
+# Xush kelibsiz videosi — hozircha o'chirilgan (None). Yoqish uchun pastga qarang.
+WELCOME_VIDEO_ID = None
 
 
 async def _show_registration_start(message: Message, state: FSMContext):
@@ -63,19 +43,18 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         )
         return
 
-    WELCOME_VIDEO_ID = "BAACAgQAAxkBAAIB..."  # O'zingizning haqiqiy file_id ingizni qo'ying
-    try:
-        await message.answer_video(
-            video=WELCOME_VIDEO_ID,
-            caption=(
-                "🎉 <b>Tanlovimizga xush kelibsiz!</b>\n\n"
-                "Videoni ko'rib chiqing va keyin ro'yxatdan o'tishni davom ettiring."
-            ),
-            parse_mode="HTML"
-        )
-    except Exception:
-        # Video file_id xato bo'lsa bot to'xtab qolmaydi
-        pass
+    if WELCOME_VIDEO_ID:
+        try:
+            await message.answer_video(
+                video=WELCOME_VIDEO_ID,
+                caption=(
+                    "🎉 <b>Tanlovimizga xush kelibsiz!</b>\n\n"
+                    "Videoni ko'rib chiqing va keyin ro'yxatdan o'tishni davom ettiring."
+                ),
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
 
     subscribed = await is_user_subscribed(bot, message.from_user.id)
     if not subscribed:
@@ -105,6 +84,32 @@ async def cb_check_sub(callback: CallbackQuery, state: FSMContext, bot: Bot):
                                        reply_markup=kb.contest_intro_kb())
         return
     await _show_registration_start(callback.message, state)
+
+
+@router.message(StateFilter(Registration.waiting_fullname, Registration.waiting_phone), Command("cancel"))
+async def cmd_cancel_registration(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "❌ Ro'yxatdan o'tish bekor qilindi.\nQayta boshlash uchun /start yuboring.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+
+def validate_fullname(fullname: str) -> tuple[bool, str]:
+    words = [w for w in fullname.split() if w]
+
+    if len(fullname) < 5:
+        return False, "Ism-familiya juda qisqa."
+    if len(words) < 2:
+        return False, "Kamida ism va familiyangizni (2 so'z) kiriting."
+    if any(ch.isdigit() for ch in fullname):
+        return False, "Ism-familiyada raqam bo'lishi mumkin emas."
+    if not FULLNAME_PATTERN.match(fullname):
+        return False, "Ism-familiyada faqat harflar bo'lishi kerak (maxsus belgilar, emoji taqiqlanadi)."
+    if any(len(w) < MIN_WORD_LENGTH for w in words):
+        return False, "Ism yoki familiya juda qisqa yozilgan."
+
+    return True, ""
 
 
 @router.message(Registration.waiting_fullname)
@@ -158,7 +163,10 @@ async def process_phone_invalid(message: Message):
 
 @router.message(F.video)
 async def get_video_id(message: Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
     await message.answer(
-        f"🎥 Video file_id:\n\n<code>{message.video.file_id}</code>",
+        f"🎥 Video file_id:\n\n<code>{message.video.file_id}</code>\n\n"
+        "Buni registration.py dagi WELCOME_VIDEO_ID ga qo'ying.",
         parse_mode="HTML"
     )
