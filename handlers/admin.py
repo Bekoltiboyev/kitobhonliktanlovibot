@@ -272,13 +272,9 @@ async def cb_approve(callback: CallbackQuery, bot: Bot):
     )
     await bot.send_message(
         user["telegram_id"],
-        "✅ To'lovingiz tasdiqlandi! Endi kitobingizni yuklab olishingiz mumkin.",
-        reply_markup=kb.download_book_kb(),
-    )
-    await bot.send_message(
-        user["telegram_id"],
-        "Test boshlanishiga qancha vaqt qolganini bilish uchun tugmani bosing 👇",
-        reply_markup=kb.start_test_info_kb(),
+        "✅ To'lovingiz tasdiqlandi! Endi kitobingizni yuklab olishingiz "
+        "yoki testgacha qancha vaqt qolganini bilish uchun pastdagi tugmalardan foydalaning 👇",
+        reply_markup=kb.post_approval_kb(),
     )
     await callback.answer("Tasdiqlandi ✅")
 

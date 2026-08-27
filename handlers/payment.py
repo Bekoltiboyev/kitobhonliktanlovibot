@@ -2,7 +2,6 @@ import os
 import hashlib
 import logging
 from aiogram import Router, F, Bot
-from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, FSInputFile
 from aiogram.fsm.context import FSMContext
 
@@ -17,15 +16,29 @@ router = Router()
 MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
-@router.callback_query(F.data == "pay_now")
-async def cb_pay_now(callback: CallbackQuery, state: FSMContext):
-    user = await db.get_user_by_tg_id(callback.from_user.id)
+from aiogram.filters import Command
+from aiogram.types import ReplyKeyboardRemove
+
+
+@router.message(PaymentFlow.waiting_receipt, Command("cancel"))
+async def cmd_cancel_payment(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "❌ To'lov jarayoni bekor qilindi.\n"
+        "Qayta boshlash uchun \"🎯 Tanlovda ishtirok etish\" tugmasini bosing.",
+        reply_markup=kb.contest_intro_kb(),
+    )
+
+
+@router.message(F.text == "Keyingi bosqichga o'tish")
+async def cb_pay_now(message: Message, state: FSMContext):
+    user = await db.get_user_by_tg_id(message.from_user.id)
     if not user or user["is_blocked"]:
-        await callback.answer("Amal bajarilmadi.", show_alert=True)
+        await message.answer("Amal bajarilmadi.")
         return
 
     if await db.has_pending_or_approved_payment(user["id"]):
-        await callback.answer("Sizning to'lovingiz allaqachon yuborilgan yoki tasdiqlangan.", show_alert=True)
+        await message.answer("Sizning to'lovingiz allaqachon yuborilgan yoki tasdiqlangan.")
         return
 
     await state.set_state(PaymentFlow.waiting_receipt)
@@ -47,20 +60,9 @@ async def cb_pay_now(callback: CallbackQuery, state: FSMContext):
         "🚫 Bekor qilish uchun: /cancel"
     )
 
-    await callback.message.answer(text, parse_mode="HTML")
-
-
-# DIQQAT: bu handler process_receipt/process_receipt_invalid dan OLDIN
-# ro'yxatdan o'tkazilishi shart — aks holda "/cancel" matni oddiy (chek
-# bo'lmagan) xabar sifatida process_receipt_invalid tomonidan "rad etilib",
-# foydalanuvchi holatdan chiqa olmay qolardi.
-@router.message(PaymentFlow.waiting_receipt, Command("cancel"))
-async def cmd_cancel_payment(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer(
-        "❌ To'lov jarayoni bekor qilindi.\n"
-        "Qayta boshlash uchun \"🎯 Tanlovda ishtirok etish\" tugmasini bosing."
-    )
+    # Pastki menyu vaqtincha yashiriladi - endi bot rasm/PDF kutmoqda,
+    # tugma bosish o'rniga fayl yuborish kerak.
+    await message.answer(text, parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
 
 
 @router.message(PaymentFlow.waiting_receipt, F.photo | F.document)
@@ -171,34 +173,33 @@ async def process_receipt_invalid(message: Message):
     )
 
 
-@router.callback_query(F.data == "download_book")
-async def cb_download_book(callback: CallbackQuery, bot: Bot):
-    user = await db.get_user_by_tg_id(callback.from_user.id)
+@router.message(F.text == "📖 Kitobni yuklab olish")
+async def cb_download_book(message: Message, bot: Bot):
+    user = await db.get_user_by_tg_id(message.from_user.id)
     if not user or not await db.is_participant(user["id"]):
-        await callback.answer("Sizga hali ruxsat berilmagan.", show_alert=True)
+        await message.answer("Sizga hali ruxsat berilmagan.")
         return
 
     cached_file_id = await db.get_setting("book_file_id")
     if cached_file_id:
         try:
             await bot.send_document(
-                callback.from_user.id,
+                message.from_user.id,
                 cached_file_id,
                 caption="📖 Kitobingiz tayyor! Uni tarqatish qat'iyan taqiqlanadi.",
                 protect_content=True,
             )
             await db.mark_book_downloaded(user["id"])
-            await callback.answer()
             return
         except Exception:
             pass
 
     if not os.path.exists(BOOK_FILE_PATH):
-        await callback.answer("Kitob fayli topilmadi, admin bilan bog'laning.", show_alert=True)
+        await message.answer("Kitob fayli topilmadi, admin bilan bog'laning.")
         return
 
     sent_doc = await bot.send_document(
-        callback.from_user.id,
+        message.from_user.id,
         FSInputFile(BOOK_FILE_PATH),
         caption="📖 Kitobingiz tayyor! Uni tarqatish qat'iyan taqiqlanadi.",
         protect_content=True,
@@ -206,4 +207,3 @@ async def cb_download_book(callback: CallbackQuery, bot: Bot):
     # File ID ni saqlab qo'yamiz
     await db.set_setting("book_file_id", sent_doc.document.file_id)
     await db.mark_book_downloaded(user["id"])
-    await callback.answer()

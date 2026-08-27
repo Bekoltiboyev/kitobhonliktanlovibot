@@ -26,19 +26,17 @@ def phone_request_kb() -> ReplyKeyboardMarkup:
     )
 
 
-def contest_intro_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🎯 Tanlovda ishtirok etish", callback_data="join_contest")]
-        ]
+def contest_intro_kb() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🎯 Tanlovda ishtirok etish")]],
+        resize_keyboard=True,
     )
 
 
-def payment_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Keyingi bosqichga o'tish", callback_data="pay_now")]
-        ]
+def payment_kb() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Keyingi bosqichga o'tish")]],
+        resize_keyboard=True,
     )
 
 
@@ -105,19 +103,21 @@ def reject_reason_kb(payment_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def download_book_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📖 Kitobni yuklab olish", callback_data="download_book")],
-        ]
-    )
+def post_approval_kb() -> ReplyKeyboardMarkup:
+    """
+    To'lov tasdiqlangandan keyingi doimiy pastki menyu.
 
-
-def start_test_info_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="⏳ Testgacha qancha vaqt qoldi?", callback_data="time_left")]
-        ]
+    DIQQAT: ikkita alohida pastki menyuni ketma-ket yuborib bo'lmaydi —
+    Telegram faqat ENG OXIRGI yuborilgan pastki menyuni ko'rsatadi, avvalgisi
+    "yashiringan" bo'lib qoladi. Shu sababli "Kitobni yuklab olish" va
+    "Testgacha vaqt" tugmalari BITTA menyuda, ikkita qatorda birlashtirildi.
+    """
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📖 Kitobni yuklab olish")],
+            [KeyboardButton(text="⏳ Testgacha qancha vaqt qoldi?")],
+        ],
+        resize_keyboard=True,
     )
 
 

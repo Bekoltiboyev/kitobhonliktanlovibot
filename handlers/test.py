@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 # ishlatadi va ikkalasi bir xil natija berishi shart.
 
 
-@router.callback_query(F.data == "time_left")
-async def cb_time_left(callback: CallbackQuery):
+@router.message(F.text == "⏳ Testgacha qancha vaqt qoldi?")
+async def cb_time_left(message: Message):
     test_time_str = await db.get_setting("test_start_time")
     if not test_time_str:
-        await callback.answer("Test vaqti hali e'lon qilinmagan.", show_alert=True)
+        await message.answer("Test vaqti hali e'lon qilinmagan.")
         return
 
     test_time = dt.datetime.fromisoformat(test_time_str)
@@ -46,15 +46,15 @@ async def cb_time_left(callback: CallbackQuery):
     now = dt.datetime.now(TZ_TASHKENT)
 
     if now >= test_time:
-        await callback.answer("Test allaqachon boshlangan yoki yakunlangan!", show_alert=True)
+        await message.answer("Test allaqachon boshlangan yoki yakunlangan!")
         return
 
     delta = test_time - now
     days, rem = divmod(int(delta.total_seconds()), 86400)
     hours, rem = divmod(rem, 3600)
     minutes, _ = divmod(rem, 60)
-    await callback.answer(
-        f"Testgacha: {days} kun {hours} soat {minutes} daqiqa qoldi", show_alert=True
+    await message.answer(
+        f"⏳ Testgacha: {days} kun {hours} soat {minutes} daqiqa qoldi"
     )
 
 

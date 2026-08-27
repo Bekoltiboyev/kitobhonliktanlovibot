@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import Message
 
 import database as db
 import keyboards as kb
@@ -8,20 +8,20 @@ from config import BOOK_NAME, BOOK_PRICE, PRIZE_TEXT
 router = Router()
 
 
-@router.callback_query(F.data == "join_contest")
-async def cb_join_contest(callback: CallbackQuery):
-    user = await db.get_user_by_tg_id(callback.from_user.id)
+@router.message(F.text == "🎯 Tanlovda ishtirok etish")
+async def cb_join_contest(message: Message):
+    user = await db.get_user_by_tg_id(message.from_user.id)
     if not user:
-        await callback.answer("Avval ro'yxatdan o'ting: /start", show_alert=True)
+        await message.answer("Avval ro'yxatdan o'ting: /start")
         return
     if user["is_blocked"]:
-        await callback.answer("Siz bloklangansiz.", show_alert=True)
+        await message.answer("Siz bloklangansiz.")
         return
 
     if await db.is_participant(user["id"]):
-        await callback.message.answer(
+        await message.answer(
             "Siz allaqachon tanlov ishtirokchisisiz! Kitobingizni yuklab olishingiz mumkin 👇",
-            reply_markup=kb.download_book_kb(),
+            reply_markup=kb.post_approval_kb(),
         )
         return
 
@@ -35,4 +35,4 @@ async def cb_join_contest(callback: CallbackQuery):
         "ℹ️ Batafsil ma'lumot va ishtirok shartlari keyingi bosqichda ko'rsatiladi. Kitobni ushbu botdan yuklab olmagan "
         "shaxsga tanlovda ishtirok etish imkoni berilmaydi."
     )
-    await callback.message.answer(text, parse_mode="HTML", reply_markup=kb.payment_kb())
+    await message.answer(text, parse_mode="HTML", reply_markup=kb.payment_kb())
