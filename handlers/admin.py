@@ -283,9 +283,86 @@ async def cb_approve(callback: CallbackQuery, bot: Bot):
     await callback.answer("Tasdiqlandi ✅")
 
 
+async def _reject_payment(bot: Bot, payment_id: int, admin_id: int, reason_text: str):
+    """
+    Rad etishning umumiy mantig'i — bazani yangilash va foydalanuvchiga
+    xabar yuborish. Ham tayyor sabab tugmasi, ham qo'lda yozilgan matn
+    shu bitta funksiya orqali ishlaydi — ikkalasida ham bir xil natija
+    kafolatlanadi.
+    """
+    payment = await db.get_payment(payment_id)
+    if not payment:
+        return False
+    await db.review_payment(payment_id, "rejected", admin_id)
+    user = await db.get_user_by_id(payment["user_id"])
+    await bot.send_message(
+        user["telegram_id"],
+        f"❌ To'lov chekingiz rad etildi.\nSabab: {reason_text}\n\n"
+        "Iltimos, to'lovni qayta tekshirib, to'g'ri chekni qayta yuboring.",
+        reply_markup=kb.payment_kb(),
+    )
+    return True
+
+
 @router.callback_query(F.data.startswith("reject_"))
 @admin_only
-async def cb_reject_start(callback: CallbackQuery, state: FSMContext):
+async def cb_reject_start(callback: CallbackQuery):
+    """
+    'Rad etish' bosilganda endi to'g'ridan-to'g'ri matn so'ralmaydi —
+    avval tayyor sabablar menyusi ko'rsatiladi, shunda admin tezroq va
+    bir xil, tushunarli matnlar bilan javob bera oladi.
+    """
+    payment_id = int(callback.data.split("_")[1])
+    payment = await db.get_payment(payment_id)
+    if not payment or payment["status"] != "pending":
+        await callback.answer("Bu chek allaqachon ko'rib chiqilgan.", show_alert=True)
+        return
+    await callback.message.edit_reply_markup(reply_markup=kb.reject_reason_kb(payment_id))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("rejback_"))
+@admin_only
+async def cb_reject_back(callback: CallbackQuery):
+    """Sabablar menyusidan asosiy (Tasdiqlash/Rad etish/Bloklash) menyuga qaytish."""
+    payment_id = int(callback.data.split("_")[1])
+    await callback.message.edit_reply_markup(reply_markup=kb.admin_review_kb(payment_id))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("rejreason_"))
+@admin_only
+async def cb_reject_reason_selected(callback: CallbackQuery, bot: Bot):
+    """Admin tayyor sabablardan birini tanlab bosdi."""
+    _, payment_id_str, key = callback.data.split("_", 2)
+    payment_id = int(payment_id_str)
+
+    payment = await db.get_payment(payment_id)
+    if not payment or payment["status"] != "pending":
+        await callback.answer("Bu chek allaqachon ko'rib chiqilgan.", show_alert=True)
+        return
+
+    reason_map = {k: text for k, _, text in kb.REJECT_REASONS}
+    reason_text = reason_map.get(key)
+    if not reason_text:
+        await callback.answer("Noma'lum sabab.", show_alert=True)
+        return
+
+    await _reject_payment(bot, payment_id, callback.from_user.id, reason_text)
+    try:
+        await callback.message.edit_caption(
+            caption=(callback.message.caption or "") + f"\n\n❌ <b>RAD ETILDI</b>\nSabab: {reason_text}",
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    await callback.answer("Rad etildi, foydalanuvchiga xabar yuborildi ❌")
+
+
+@router.callback_query(F.data.startswith("rejcustom_"))
+@admin_only
+async def cb_reject_custom(callback: CallbackQuery, state: FSMContext):
+    """Admin 'Boshqa sabab (o'zim yozaman)' tugmasini bosdi — eski, qo'lda yozish oqimi."""
     payment_id = int(callback.data.split("_")[1])
     payment = await db.get_payment(payment_id)
     if not payment or payment["status"] != "pending":
@@ -302,19 +379,12 @@ async def cb_reject_start(callback: CallbackQuery, state: FSMContext):
 async def process_reject_reason(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     payment_id = data.get("reject_payment_id")
-    payment = await db.get_payment(payment_id)
-    if not payment:
+
+    ok = await _reject_payment(bot, payment_id, message.from_user.id, message.text)
+    if not ok:
         await state.clear()
         return
 
-    await db.review_payment(payment_id, "rejected", message.from_user.id)
-    user = await db.get_user_by_id(payment["user_id"])
-    await bot.send_message(
-        user["telegram_id"],
-        f"❌ To'lov chekingiz rad etildi.\nSabab: {message.text}\n\n"
-        "Iltimos, to'lovni qayta tekshirib, to'g'ri chekni qayta yuboring.",
-        reply_markup=kb.payment_kb(),
-    )
     await message.reply("Foydalanuvchiga xabar yuborildi ❌")
     await state.clear()
 

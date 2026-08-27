@@ -54,6 +54,57 @@ def admin_review_kb(payment_id: int) -> InlineKeyboardMarkup:
     )
 
 
+# Rad etish uchun tayyor sabablar: (kalit, tugma matni, foydalanuvchiga yuboriladigan to'liq matn)
+# Admin bittasini tanlab bossa, shu matn foydalanuvchiga avtomatik yuboriladi —
+# har safar qo'lda yozish shart emas.
+REJECT_REASONS = [
+    (
+        "fake",
+        "❌ Chek soxta (fake)",
+        "Chek soxta (fake) — bunday to'lov tizimda ko'rinmadi. "
+        "Iltimos, haqiqiy to'lov chekini qayta yuboring.",
+    ),
+    (
+        "insufficient",
+        "💰 Mablag' yetarli emas",
+        "To'langan mablag' yetarli emas. Iltimos, belgilangan miqdorni to'liq "
+        "to'lab, chekni qayta yuboring.",
+    ),
+    (
+        "unclear",
+        "📄 Chek noaniq/o'qilmaydi",
+        "Chek tasviri noaniq, ma'lumotlarni o'qib bo'lmayapti. Iltimos, "
+        "aniqroq va to'liq ko'rinadigan rasm bilan qayta yuboring.",
+    ),
+    (
+        "wrong_card",
+        "💳 Noto'g'ri kartaga to'langan",
+        "To'lov noto'g'ri karta raqamiga yuborilgan. Iltimos, botda ko'rsatilgan "
+        "to'g'ri karta raqamiga to'lov qilib, chekni qayta yuboring.",
+    ),
+    (
+        "duplicate",
+        "🔁 Bu chek allaqachon ishlatilgan",
+        "Bu chek allaqachon boshqa ariza uchun ishlatilgan. Iltimos, o'zingiz "
+        "amalga oshirgan haqiqiy to'lov chekini yuboring.",
+    ),
+]
+
+
+def reject_reason_kb(payment_id: int) -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton(text=label, callback_data=f"rejreason_{payment_id}_{key}")]
+        for key, label, _ in REJECT_REASONS
+    ]
+    buttons.append(
+        [InlineKeyboardButton(text="✏️ Boshqa sabab (o'zim yozaman)", callback_data=f"rejcustom_{payment_id}")]
+    )
+    buttons.append(
+        [InlineKeyboardButton(text="◀️ Orqaga", callback_data=f"rejback_{payment_id}")]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def download_book_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

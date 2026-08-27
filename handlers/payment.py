@@ -99,12 +99,18 @@ async def process_receipt(message: Message, state: FSMContext, bot: Bot):
     payment_id = await db.create_payment(user["id"], file_id, file_type, file_hash)
     await state.clear()
 
+    # Telegram contact.phone_number odatda "+" belgisisiz keladi (masalan
+    # "998901234567"). Admin uchun o'qishga qulay bo'lishi uchun har doim
+    # "+" bilan ko'rsatamiz.
+    phone_raw = str(user["phone"] or "").strip()
+    phone_display = phone_raw if phone_raw.startswith("+") else f"+{phone_raw}"
+
     caption = (
         "🧾 <b>Yangi to'lov cheki</b>\n\n"
         f"F.I.Sh: {user['fullname']}\n"
         f"Username: {'@' + user['username'] if user['username'] else '-'}\n"
         f"Telegram ID: <code>{user['telegram_id']}</code>\n"
-        f"Telefon: {user['phone']}"
+        f"Telefon: {phone_display}"
     )
 
     # ---- Takroriy chek tekshiruvi ----
