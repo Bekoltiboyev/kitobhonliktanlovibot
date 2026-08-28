@@ -30,7 +30,29 @@ def _styles():
                            leading=20, alignment=1, spaceAfter=10))
     ss.add(ParagraphStyle(name="NormalUZ", fontName=FONT_NAME, fontSize=10))
     ss.add(ParagraphStyle(name="SmallUZ", fontName=FONT_NAME, fontSize=8, textColor=colors.grey))
+    # Jadval katakchalari uchun — uzun matn (masalan uzun ism-familiya)
+    # ustunga sig'masa, AVTOMATIK ikkinchi qatorga o'tadi, keyingi ustun
+    # ustiga "chiqib ketmaydi". Oddiy matn (string) sifatida jadvalga
+    # qo'yilgan uzun so'zlar reportlab'da o'z-o'zidan qatorga o'tmaydi —
+    # shuning uchun Paragraph orqali beriladi.
+    ss.add(ParagraphStyle(name="TableCellUZ", fontName=FONT_NAME, fontSize=8, leading=10))
+    # Bloklangan foydalanuvchi qatorlari uchun - jadval darajasidagi
+    # TEXTCOLOR buyrug'i Paragraph ichidagi matnga ta'sir qilmaydi
+    # (reportlab'ning o'ziga xosligi), shuning uchun alohida qizil stil kerak.
+    ss.add(ParagraphStyle(name="TableCellRedUZ", fontName=FONT_NAME, fontSize=8, leading=10,
+                           textColor=colors.HexColor("#b91c1c")))
+    # G'olib (1,2,3-o'rin) qatorlari uchun qalin shrift - jadval darajasidagi
+    # FONTNAME buyrug'i ham Paragraph ichidagi matnga ta'sir qilmaydi.
+    ss.add(ParagraphStyle(name="TableCellBoldUZ", fontName=FONT_NAME_BOLD, fontSize=8, leading=10))
     return ss
+
+
+def _cell(text, style_sheet, red=False, bold=False):
+    """Jadval katakchasi uchun matnni Paragraph obyektiga o'raydi (qatorga o'tishi uchun)."""
+    safe_text = str(text) if text else "-"
+    safe_text = safe_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    style_name = "TableCellRedUZ" if red else ("TableCellBoldUZ" if bold else "TableCellUZ")
+    return Paragraph(safe_text, style_sheet[style_name])
 
 
 def generate_user_result_pdf(path: str, user: dict, result: dict, questions: list, user_id: int):
@@ -111,9 +133,10 @@ def generate_admin_results_pdf(path: str, results: list):
     rows = [["O'rin", "F.I.Sh", "Telegram ID", "To'g'ri", "Xato", "Bo'sh", "Ball", "Vaqt (daq)"]]
     for idx, r in enumerate(results, start=1):
         duration = (r["finished_at"] - r["started_at"]) if r["finished_at"] and r["started_at"] else 0
+        is_top3 = idx <= 3
         rows.append([
             str(idx),
-            r["fullname"],
+            _cell(r["fullname"], ss, bold=is_top3),
             str(r["telegram_id"]),
             str(r["correct_count"]),
             str(r["wrong_count"]),
@@ -183,9 +206,9 @@ def generate_participants_pdf(path: str, participants: list):
         status = "Bloklangan" if p["is_blocked"] else "Faol"
         rows.append([
             str(idx),
-            p["fullname"] or "-",
+            _cell(p["fullname"], ss, red=p["is_blocked"]),
             str(p["telegram_id"]),
-            f"@{p['username']}" if p.get("username") else "-",
+            _cell(f"@{p['username']}" if p.get("username") else "-", ss, red=p["is_blocked"]),
             phone_display,
             date_str,
             status,
