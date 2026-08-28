@@ -67,6 +67,7 @@ async def cb_admin_cancel(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "admin_stats")
 @admin_only
 async def cb_admin_stats(callback: CallbackQuery):
+    stats = await db.get_bot_stats()
     participants = await db.get_all_participants()
     results = await db.get_all_results_with_users()
     finished = [r for r in results if r["status"] == "finished"]
@@ -75,12 +76,34 @@ async def cb_admin_stats(callback: CallbackQuery):
     text = (
         "📈 <b>BOTNING JORIY STATISTIKASI</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👥 <b>Tasdiqlangan ishtirokchilar:</b> {len(participants)} nafar\n"
+        f"🆕 <b>Ro'yxatdan o'tganlar:</b> {stats['total_users']} nafar\n"
+        f"💰 <b>To'lov qilib tasdiqlanganlar:</b> {len(participants)} nafar\n"
         f"📝 <b>Test topshirayotganlar:</b> {len(in_progress)} nafar\n"
         f"🏁 <b>Testni yakunlaganlar:</b> {len(finished)} nafar\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     await callback.message.answer(text, parse_mode="HTML")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_paid_pdf")
+@admin_only
+async def cb_paid_pdf(callback: CallbackQuery):
+    """To'lov qilib, tasdiqlangan barcha foydalanuvchilar ro'yxatini PDF holida beradi."""
+    participants = await db.get_all_participants_full()
+    if not participants:
+        await callback.message.answer("Hozircha to'lov qilib tasdiqlangan foydalanuvchi yo'q.")
+        await callback.answer()
+        return
+
+    from utils.pdf_generator import generate_participants_pdf
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "tolov_qilganlar.pdf")
+        generate_participants_pdf(path, participants)
+        await callback.message.answer_document(
+            FSInputFile(path),
+            caption=f"💰 To'lov qilganlar hisoboti — jami {len(participants)} nafar",
+        )
     await callback.answer()
 
 

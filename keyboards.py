@@ -144,6 +144,9 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="📈 Jonli statistika", callback_data="admin_stats"),
             ],
             [
+                InlineKeyboardButton(text="💰 To'lov qilganlar hisoboti (PDF)", callback_data="admin_paid_pdf"),
+            ],
+            [
                 InlineKeyboardButton(text="🚫 Foydalanuvchini bloklash", callback_data="admin_block_user"),
                 InlineKeyboardButton(text="✅ Blokdan chiqarish", callback_data="admin_unblock_user"),
             ]

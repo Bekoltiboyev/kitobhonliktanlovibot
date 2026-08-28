@@ -325,6 +325,24 @@ async def get_all_participants():
         return [dict(r) for r in rows]
 
 
+async def get_all_participants_full():
+    """
+    To'lov qilib, tasdiqlangan (ishtirokchi bo'lgan) barcha foydalanuvchilarning
+    to'liq ma'lumoti — admin uchun PDF hisobot yaratishda ishlatiladi.
+    Bloklangan foydalanuvchilar ham ko'rsatiladi (hisobotda shaffoflik uchun),
+    lekin alohida belgilanadi.
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT
+                u.telegram_id, u.full_name AS fullname, u.username, u.phone,
+                u.is_blocked, p.created_at AS approved_at
+            FROM participants p JOIN users u ON u.id = p.user_id
+            ORDER BY p.created_at ASC
+        """)
+        return [dict(r) for r in rows]
+
+
 async def is_participant(user_id: int) -> bool:
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT id FROM participants WHERE user_id=$1", user_id)
