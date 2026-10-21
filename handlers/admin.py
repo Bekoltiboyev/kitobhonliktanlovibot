@@ -39,20 +39,46 @@ def admin_only(func):
 
 # ---------- ASOSIY ADMIN PANEL ----------
 
-@router.message(Command("admin"))
-async def cmd_admin_panel(message: Message):
-    if message.from_user.id not in ADMIN_IDS:
-        return
-    
+async def _panel_text_and_kb():
+    """Admin panel matni va tugmalari (ro'yxatdan o'tish holati bilan)."""
     saved_time = await db.get_setting("test_start_time", "Belgilanmagan")
+    reg_open = await db.is_registration_open()
+    reg_status = "✅ Ochiq" if reg_open else "🔒 Yopiq"
     text = (
         "🛠 <b>BOT BOSHQARUV PANELI (ADMIN)</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"⏰ <b>Test boshlanish vaqti:</b> <code>{saved_time}</code>\n"
+        f"📝 <b>Ro'yxatdan o'tish:</b> {reg_status}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "Kerakli bo'limni tanlang 👇"
     )
-    await message.answer(text, reply_markup=kb.admin_panel_kb(), parse_mode="HTML")
+    return text, kb.admin_panel_kb(registration_open=reg_open)
+
+
+@router.message(Command("admin"))
+async def cmd_admin_panel(message: Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    text, markup = await _panel_text_and_kb()
+    await message.answer(text, reply_markup=markup, parse_mode="HTML")
+
+
+@router.callback_query(F.data == "admin_toggle_reg")
+@admin_only
+async def cb_toggle_registration(callback: CallbackQuery):
+    """Ro'yxatdan o'tishni ochish/yopish. Allaqachon ro'yxatdan o'tganlarga ta'sir qilmaydi."""
+    new_state = not await db.is_registration_open()
+    await db.set_registration_open(new_state)
+    text, markup = await _panel_text_and_kb()
+    try:
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    except Exception:
+        pass
+    await callback.answer(
+        "✅ Ro'yxatdan o'tish OCHILDI" if new_state else "🔒 Ro'yxatdan o'tish YOPILDI",
+        show_alert=True,
+    )
 
 
 @router.callback_query(F.data == "admin_cancel")
@@ -541,6 +567,94 @@ async def process_block_reason(message: Message, state: FSMContext, bot: Bot):
         pass
     await message.reply(f"Foydalanuvchi {user['fullname']} bloklandi 🚫")
     await state.clear()
+
+
+# import json
+# import datetime as dt
+# from aiogram import types, F
+# from aiogram.filters import Command
+# import aiosqlite
+
+# import database as db
+# import config  # config ni to'g'ridan-to'g'ri import qilamiz
+# from utils.questions import load_questions
+
+
+# @router.message(Command("make_winner"))
+# async def cmd_make_winner(message: types.Message):
+#     admin_list = getattr(config, "ADMINS", []) or getattr(config, "ADMIN_IDS", [])
+#     single_admin = getattr(config, "ADMIN_ID", None)
+
+#     is_admin = (message.from_user.id in admin_list) or (message.from_user.id == single_admin)
+#     if not is_admin:
+#         return
+
+#     args = message.text.strip().split()
+#     if len(args) < 2:
+#         await message.answer("Format: <code>/make_winner TELEGRAM_ID</code>", parse_mode="HTML")
+#         return
+
+#     try:
+#         target_tg_id = int(args[1])
+#     except ValueError:
+#         await message.answer("❌ ID faqat raqam bo'lishi kerak.")
+#         return
+
+#     # 1. Foydalanuvchini bazadan tekshirish
+#     user = await db.get_user_by_telegram_id(target_tg_id)
+#     if not user:
+#         await message.answer(f"❌ <code>{target_tg_id}</code> bazada topilmadi. U avval botga /start bosishi kerak.")
+#         return
+
+#     u_data = dict(user)
+#     user_id = u_data.get("id", user[0])
+    
+#     full_name = (
+#         u_data.get("full_name") 
+#         or u_data.get("name") 
+#         or u_data.get("fio") 
+#         or u_data.get("username") 
+#         or f"User_{target_tg_id}"
+#     )
+
+#     # 2. Savollar sonini olish
+#     questions = load_questions()
+#     total_q = len(questions) if questions else 30
+#     order = list(range(total_q))
+    
+#     tz = getattr(config, "TZ_TASHKENT", dt.timezone(dt.timedelta(hours=5)))
+#     now_iso = dt.datetime.now(tz).isoformat()
+
+#     # 3. Faqat results jadvaliga 100% natija yozish
+#     db_name = getattr(db, "DB_NAME", "database.db")
+#     async with aiosqlite.connect(db_name) as conn:
+#         await conn.execute("DELETE FROM results WHERE user_id = ?", (user_id,))
+#         await conn.execute("""
+#             INSERT INTO results (user_id, question_order, current_index, score, status, started_at, finished_at)
+#             VALUES (?, ?, ?, ?, 'finished', ?, ?)
+#         """, (user_id, json.dumps(order), total_q, total_q, now_iso, now_iso))
+#         await conn.commit()
+
+#     await message.answer(
+#         f"🏆 <b>G'olib muvaffaqiyatli belgilandi!</b>\n\n"
+#         f"👤 <b>Ism:</b> {full_name}\n"
+#         f"🆔 <b>ID:</b> <code>{target_tg_id}</code>\n"
+#         f"📊 <b>Ball:</b> {total_q}/{total_q} (100%)\n"
+#         f"📌 <b>Holat:</b> finished (Yakunlangan)",
+#         parse_mode="HTML"
+#     )
+
+
+# ---------- HALI TASDIQLANMAGAN CHEKLARNI QAYTA CHIQARISH ----------
+#
+# MUAMMO: agar adminlar guruhida kimdir ko'plab xabarni birdan tanlab
+# o'chirsa (masalan Telegram'ning "bir nechtasini tanlash" funksiyasi
+# orqali), hali "kutilmoqda" (pending) holatidagi cheklar ham
+# ko'rinishdan yo'qolib qolishi mumkin. Chekning o'zi (fayl, foydalanuvchi
+# ma'lumoti, holati) BAZADA saqlanib qoladi — faqat Telegramdagi xabar
+# yo'qoladi. /pending buyrug'i shu "yo'qolgan" cheklarni bazadan qidirib,
+# ularni QAYTA, xuddi yangi kelgandek, tugmalari bilan birga chiqarib
+# beradi — hech qanday ma'lumot yo'qolmaydi.
 
 
 @router.message(Command("pending"))

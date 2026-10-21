@@ -9,7 +9,7 @@ import database as db
 import keyboards as kb
 from states import Registration
 from utils.subscription import is_user_subscribed
-from config import PRIZE_TEXT, ADMIN_IDS
+from config import PRIZE_TEXT, ADMIN_IDS, REQUIRED_CHANNEL
 
 router = Router()
 
@@ -18,6 +18,14 @@ MIN_WORD_LENGTH = 2
 
 # Xush kelibsiz videosi — hozircha o'chirilgan (None). Yoqish uchun pastga qarang.
 WELCOME_VIDEO_ID = None
+
+
+def _closed_text() -> str:
+    return (
+        "🔒 <b>Ro'yxatdan o'tish yakunlangan.</b>\n\n"
+        "Yangi ishtirokchilar qabul qilinmaydi. "
+        f"Tanlov yangiliklarini {REQUIRED_CHANNEL} kanalidan kuzatib boring."
+    )
 
 
 async def _show_registration_start(message: Message, state: FSMContext):
@@ -41,6 +49,11 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
             "Siz allaqachon ro'yxatdan o'tgansiz! 👇",
             reply_markup=kb.contest_intro_kb(),
         )
+        return
+
+    # Yangi foydalanuvchi, lekin ro'yxatdan o'tish yopilgan
+    if not await db.is_registration_open():
+        await message.answer(_closed_text(), parse_mode="HTML")
         return
 
     if WELCOME_VIDEO_ID:
@@ -82,6 +95,9 @@ async def cb_check_sub(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if user:
         await callback.message.answer("Rahmat! Siz allaqachon ro'yxatdan o'tgansiz 👇",
                                        reply_markup=kb.contest_intro_kb())
+        return
+    if not await db.is_registration_open():
+        await callback.message.answer(_closed_text(), parse_mode="HTML")
         return
     await _show_registration_start(callback.message, state)
 
@@ -127,6 +143,11 @@ async def process_fullname(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
+    if not data.get("fix_name") and not await db.is_registration_open():
+        # Foydalanuvchi ro'yxatdan o'tish jarayonida edi, ro'yxat yopildi
+        await state.clear()
+        await message.answer(_closed_text(), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+        return
     if data.get("fix_name"):
         # Ro'yxatdan oldin o'tgan, lekin ismi saqlanmay qolgan foydalanuvchi:
         # telefon qayta so'ralmaydi, faqat ism-familiya yangilanadi.
@@ -151,6 +172,11 @@ async def process_phone(message: Message, state: FSMContext):
     phone = message.contact.phone_number
     data = await state.get_data()
     fullname = data.get("fullname")
+
+    if not await db.is_registration_open() and not await db.get_user_by_tg_id(message.from_user.id):
+        await state.clear()
+        await message.answer(_closed_text(), parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+        return
 
     if not fullname:
         # Holat (state) ma'lumoti yo'qolgan (masalan bot qayta ishga tushgan):

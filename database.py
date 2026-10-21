@@ -574,3 +574,14 @@ async def set_setting(key: str, value: str):
             INSERT INTO settings (key, value) VALUES ($1, $2)
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
         """, key, str(value))
+
+
+# ==================== RO'YXATDAN O'TISHNI OCHISH / YOPISH ====================
+
+async def is_registration_open() -> bool:
+    """Yangi foydalanuvchilar ro'yxatdan o'tishi mumkinmi? (standart: ha)"""
+    return (await get_setting("registration_open", "1")) != "0"
+
+
+async def set_registration_open(is_open: bool):
+    await set_setting("registration_open", "1" if is_open else "0")
