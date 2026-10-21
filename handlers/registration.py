@@ -126,6 +126,18 @@ async def process_fullname(message: Message, state: FSMContext):
         )
         return
 
+    data = await state.get_data()
+    if data.get("fix_name"):
+        # Ro'yxatdan oldin o'tgan, lekin ismi saqlanmay qolgan foydalanuvchi:
+        # telefon qayta so'ralmaydi, faqat ism-familiya yangilanadi.
+        await db.update_user_fullname(message.from_user.id, fullname)
+        await state.clear()
+        await message.answer(
+            "✅ Rahmat! Ism-familiyangiz saqlandi.",
+            reply_markup=kb.contest_intro_kb(),
+        )
+        return
+
     await state.update_data(fullname=fullname)
     await state.set_state(Registration.waiting_phone)
     await message.answer(
@@ -139,6 +151,13 @@ async def process_phone(message: Message, state: FSMContext):
     phone = message.contact.phone_number
     data = await state.get_data()
     fullname = data.get("fullname")
+
+    if not fullname:
+        # Holat (state) ma'lumoti yo'qolgan (masalan bot qayta ishga tushgan):
+        # ismsiz yozuv yaratmaymiz, ismni qaytadan so'raymiz.
+        await state.clear()
+        await _show_registration_start(message, state)
+        return
 
     await db.create_user(
         telegram_id=message.from_user.id,

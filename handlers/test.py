@@ -13,6 +13,7 @@ from aiogram.types import CallbackQuery, Message, FSInputFile
 import database as db
 import keyboards as kb
 from utils.questions import load_questions, get_user_shuffled_options
+from utils.telegram_safe import safe_send_message, safe_send_document, safe_call
 from utils.pdf_generator import generate_user_result_pdf
 from config import TEST_DURATION_MINUTES, TOTAL_QUESTIONS, NEGATIVE_MARK, TZ_TASHKENT
 
@@ -82,7 +83,7 @@ async def begin_test_for_user(bot: Bot, user_id: int, telegram_id: int):
     await send_question(bot, telegram_id, user_id, 0)
 
 
-async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: int):
+async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: int, prefix: str = ""):
     result = await db.get_test_result(user_id)
     if not result:
         return
@@ -108,9 +109,12 @@ async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: in
     q = questions[real_q_index]
     user_options, _ = get_user_shuffled_options(user_id, real_q_index, q)
 
-    text = f"❓ <b>{step_index + 1}/{len(order)}-savol</b>\n\n{q['question']}"
-    await bot.send_message(
-        telegram_id, text, parse_mode="HTML",
+    text = f"{prefix}❓ <b>{step_index + 1}/{len(order)}-savol</b>\n\n{q['question']}"
+    # max_retries=10: ko'p odam bir vaqtda javob berganda Telegram "kuting" desa,
+    # savol YO'QOLMASLIGI uchun kutib, qayta-qayta urinadi (aks holda foydalanuvchi
+    # keyingi savolsiz qotib qolardi).
+    return await safe_send_message(
+        bot, telegram_id, text, max_retries=10, parse_mode="HTML",
         reply_markup=kb.question_kb(step_index, user_options),
         # protect_content=True — Telegram darajasida forward qilish va
         # "Copy" (nusxalash) tugmasini o'chiradi. Bu ekran suratini olishning
@@ -119,6 +123,21 @@ async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: in
         # xuddi kitob fayli uchun ishlatilgan himoyaning o'zi.
         protect_content=True,
     )
+
+
+_BG_TASKS: set = set()
+
+
+def _spawn(coro):
+    """Fon vazifasini ishga tushiradi va uni axlat yig'uvchidan saqlaydi."""
+    task = asyncio.create_task(coro)
+    _BG_TASKS.add(task)
+    task.add_done_callback(_BG_TASKS.discard)
+
+
+async def _clear_markup(callback: CallbackQuery):
+    """Javob berilgan savoldagi tugmalarni olib tashlaydi (keyingi savolni kechiktirmaslik uchun fonda)."""
+    await safe_call(lambda: callback.message.edit_reply_markup(reply_markup=None), max_retries=3)
 
 
 @router.callback_query(F.data.startswith("ans_"))
@@ -142,7 +161,10 @@ async def cb_answer(callback: CallbackQuery, bot: Bot):
                 f"user_id={user['id']}, tg_id={callback.from_user.id}, "
                 f"test_status={result['status']}, started_at={result['started_at']}"
             )
-            await callback.answer("Bu savol allaqachon javoblangan.", show_alert=True)
+            await safe_call(
+                lambda: callback.answer("Bu savol allaqachon javoblangan.", show_alert=True),
+                max_retries=0,
+            )
             return
 
         started = dt.datetime.fromtimestamp(result["started_at"])
@@ -170,14 +192,20 @@ async def cb_answer(callback: CallbackQuery, bot: Bot):
         _, user_correct = get_user_shuffled_options(user["id"], real_q_index, current_q)
         is_correct = (choice == user_correct)
 
-        await db.save_answer(user["id"], real_q_index, choice, step_index + 1, is_correct)
+        saved = await db.save_answer(user["id"], real_q_index, choice, step_index + 1, is_correct)
+        if not saved:
+            # Tugma ikki marta bosilgan (yoki test shu orada yakunlangan): javob
+            # allaqachon yozilgan, qaytadan yozmaymiz va savolni qayta yubormaymiz.
+            await safe_call(lambda: callback.answer(), max_retries=0)
+            return
 
-        try:
-            await callback.message.edit_reply_markup(reply_markup=None)
-        except Exception:
-            pass
-
-        await callback.answer(f"Javobingiz qabul qilindi: {choice}")
+        # DIQQAT: bundan keyingi har bir Telegram chaqiruvi himoyalangan — flood
+        # control bo'lsa ham keyingi savol ALBATTA yuboriladi (javob allaqachon
+        # bazaga yozilgan, savol yuborilmasa foydalanuvchi qotib qolardi).
+        await safe_call(
+            lambda: callback.answer(f"Javobingiz qabul qilindi: {choice}"), max_retries=0
+        )
+        _spawn(_clear_markup(callback))
         await send_question(bot, callback.from_user.id, user["id"], step_index + 1)
     except Exception as e:
         logger.error(f"cb_answer da xatolik: {e}", exc_info=True)
@@ -187,18 +215,27 @@ async def cb_answer(callback: CallbackQuery, bot: Bot):
             pass
 
 
-async def _compute_score(user_id: int, answers: dict, questions: list):
+async def _compute_score(user_id: int, answers: dict, questions: list, order: list = None):
+    """
+    Natijani hisoblaydi. `order` — shu foydalanuvchiga BERILGAN savollarning
+    haqiqiy indekslari (masalan, 100 talik bazadan tasodifiy tanlangan 60 ta).
+    Faqat shular hisobga olinadi: "javob berilmagan" soni ham 60 dan hisoblanadi,
+    bazadagi 100 dan emas.
+    """
+    indices = list(order) if order is not None else list(range(len(questions)))
     correct = wrong = 0
-    for i, q in enumerate(questions):
+    for i in indices:
+        if i >= len(questions):
+            continue
         given = answers.get(str(i))
         if given is None:
             continue
-        _, user_correct = get_user_shuffled_options(user_id, i, q)
+        _, user_correct = get_user_shuffled_options(user_id, i, questions[i])
         if given == user_correct:
             correct += 1
         else:
             wrong += 1
-    unanswered = len(questions) - correct - wrong
+    unanswered = len(indices) - correct - wrong
     score = correct - wrong * NEGATIVE_MARK
     return correct, wrong, unanswered, score
 
@@ -210,8 +247,10 @@ async def finalize_user_test(bot: Bot, user_id: int, telegram_id: int):
 
     questions = load_questions()
     answers = json.loads(result["answers_json"]) if result["answers_json"] else {}
-    correct, wrong, unanswered, score = await _compute_score(user_id, answers, questions)
-    await db.finish_test(user_id, correct, wrong, unanswered, score)
+    order = json.loads(result["question_order"]) if result["question_order"] else None
+    correct, wrong, unanswered, score = await _compute_score(user_id, answers, questions, order)
+    if not await db.finish_test(user_id, correct, wrong, unanswered, score):
+        return  # boshqa jarayon allaqachon yakunlagan (natija PDF si ikki marta ketmasin)
 
     user = await db.get_user_by_id(user_id)
     result = await db.get_test_result(user_id)
@@ -233,17 +272,17 @@ async def finalize_user_test(bot: Bot, user_id: int, telegram_id: int):
             },
             questions=questions,
             user_id=user_id,
+            order=order,
         )
-        try:
-            await bot.send_document(
-                telegram_id, FSInputFile(path),
-                caption="✅ Test yakunlandi! Natijangiz ilova qilingan hisobotda.",
-                # Natija hisobotida to'g'ri javoblar ham ko'rinadi — bu ham
-                # tarqatilmasligi uchun himoyalanadi.
-                protect_content=True,
-            )
-        except Exception:
-            pass
+        # safe_send_document: yuzlab odam bir vaqtda tugatganda flood control
+        # bo'lsa ham natija PDF si kutib, qayta yuboriladi (yo'qolmaydi).
+        await safe_send_document(
+            bot, telegram_id, FSInputFile(path),
+            caption="✅ Test yakunlandi! Natijangiz ilova qilingan hisobotda.",
+            # Natija hisobotida to'g'ri javoblar ham ko'rinadi — bu ham
+            # tarqatilmasligi uchun himoyalanadi.
+            protect_content=True,
+        )
 
 
 async def force_finish_user(bot: Bot, user_id: int, telegram_id: int):

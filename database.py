@@ -51,7 +51,15 @@ async def init_db():
     pool = await asyncpg.create_pool(
         host=DB_HOST, port=DB_PORT, database=DB_NAME,
         user=DB_USER, password=DB_PASSWORD,
-        min_size=2, max_size=20,
+        # DIQQAT: oldin min_size=2, max_size=20 edi — bu kichik tanlovlar
+        # (masalan 50-100 ishtirokchi) uchun yetarli edi. Endi tanlovda
+        # minglab foydalanuvchi bo'lgani uchun, test vaqtida yuzlab kishi
+        # BIR VAQTDA javob yuborishi mumkin — 20 ta ulanish tez tugab,
+        # navbatga tiqilib qolish (sekinlashish) xavfi bor edi.
+        # PostgreSQL'ning standart 'max_connections' sozlamasi odatda 100
+        # bo'lgani uchun, 60 ta xavfsiz zaxira bilan qoldiradi (qo'lda
+        # psql orqali ulanish uchun ham joy qoladi).
+        min_size=5, max_size=60,
     )
 
     async with pool.acquire() as conn:
@@ -209,6 +217,8 @@ async def create_user(telegram_id: int, username: str, fullname: str, phone: str
     registration.py aynan shu nomlar bilan (telegram_id, username, fullname,
     phone) chaqiradi — shuning uchun parametr nomlari ham shunga mos.
     """
+    if not fullname or not str(fullname).strip():
+        raise ValueError("create_user: fullname bo'sh bo'lishi mumkin emas")
     async with pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO users (telegram_id, username, full_name, phone)
@@ -218,6 +228,22 @@ async def create_user(telegram_id: int, username: str, fullname: str, phone: str
                 full_name = EXCLUDED.full_name,
                 phone = EXCLUDED.phone
         """, telegram_id, username, fullname, phone)
+
+
+async def update_user_fullname(telegram_id: int, fullname: str):
+    """Ismi bo'sh qolgan foydalanuvchining F.I.Sh sini to'ldirish."""
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET full_name = $1 WHERE telegram_id = $2",
+            fullname, telegram_id,
+        )
+
+
+async def count_users_without_name() -> int:
+    async with pool.acquire() as conn:
+        return await conn.fetchval(
+            "SELECT COUNT(*) FROM users WHERE COALESCE(TRIM(full_name), '') = ''"
+        ) or 0
 
 
 async def set_user_blocked(user_id: int, is_blocked: bool, reason: str = None):
@@ -393,18 +419,40 @@ async def start_test(user_id: int, order: list):
         """, user_id, json.dumps(order), now)
 
 
-async def save_answer(user_id: int, q_index: int, answer: str, next_index: int, is_correct: bool):
+async def reset_started_at(user_id: int):
+    """
+    Test boshlanish vaqtini savol foydalanuvchiga HAQIQATAN yetkazilgan paytga
+    suradi. Yuzlab odamga birdan yuborilganda navbatda turganlarning vaqti
+    navbatda o'tib ketmasligi uchun (adolat).
+    """
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE results SET started_at=$1 WHERE user_id=$2 AND status='in_progress' AND current_index=0",
+            time.time(), user_id,
+        )
+
+
+async def save_answer(user_id: int, q_index: int, answer: str, next_index: int, is_correct: bool) -> bool:
     """
     test.py chaqiradi: db.save_answer(user_id, q_index, choice, step_index+1, is_correct)
     — argumentlar tartibi aynan shu: (user_id, q_index, answer, next_index, is_correct)
+
+    ATOMIK: javob faqat test hali 'in_progress' bo'lsa VA foydalanuvchi aynan shu
+    savolda turgan bo'lsa (current_index == next_index - 1) yoziladi. Tugmani ikki
+    marta bosish yoki bir vaqtda kelgan ikkita so'rov bo'lsa, faqat BIRINCHISI
+    yoziladi (True qaytadi), qolgani rad etiladi (False) — ball ikki marta
+    hisoblanmaydi va keyingi savol ikki marta yuborilmaydi.
     """
     score_increment = 1 if is_correct else 0
     async with pool.acquire() as conn:
         async with conn.transaction():
             row = await conn.fetchrow(
-                "SELECT answers_json FROM results WHERE user_id=$1 FOR UPDATE", user_id
+                "SELECT answers_json, current_index, status FROM results WHERE user_id=$1 FOR UPDATE",
+                user_id,
             )
-            answers = json.loads(row["answers_json"]) if row and row["answers_json"] else {}
+            if not row or row["status"] != "in_progress" or row["current_index"] != next_index - 1:
+                return False
+            answers = json.loads(row["answers_json"]) if row["answers_json"] else {}
             answers[str(q_index)] = answer
 
             await conn.execute("""
@@ -419,19 +467,25 @@ async def save_answer(user_id: int, q_index: int, answer: str, next_index: int, 
                 INSERT INTO user_answers (user_id, question_index, chosen_answer, is_correct)
                 VALUES ($1, $2, $3, $4)
             """, user_id, q_index, answer, is_correct)
+            return True
 
 
-async def finish_test(user_id: int, correct: int, wrong: int, unanswered: int, score: float):
+async def finish_test(user_id: int, correct: int, wrong: int, unanswered: int, score: float) -> bool:
     """
     test.py chaqiradi: db.finish_test(user_id, correct, wrong, unanswered, score)
+
+    ATOMIK: faqat 'in_progress' holatdagi test yakunlanadi. Foydalanuvchining oxirgi
+    javobi va vaqt tugashi bir vaqtda yakunlashga urinsa, faqat BIRINCHISI True
+    qaytaradi — natija PDF si ikki marta yuborilmaydi.
     """
     async with pool.acquire() as conn:
-        await conn.execute("""
+        status = await conn.execute("""
             UPDATE results
             SET status='finished', finished_at=$1,
                 correct_count=$2, wrong_count=$3, unanswered_count=$4, score=$5
-            WHERE user_id=$6
+            WHERE user_id=$6 AND status='in_progress'
         """, time.time(), correct, wrong, unanswered, score, user_id)
+        return status.endswith(" 1")
 
 
 async def get_all_in_progress_tests():
@@ -468,9 +522,30 @@ async def get_all_results_with_users():
         rows = await conn.fetch("""
             SELECT r.*, u.telegram_id, u.full_name AS fullname, u.username, u.phone
             FROM results r JOIN users u ON u.id = r.user_id
-            ORDER BY r.score DESC, r.finished_at ASC NULLS LAST
+            ORDER BY r.score DESC, (r.finished_at - r.started_at) ASC NULLS LAST
         """)
         return [dict(r) for r in rows]
+
+
+async def get_broadcast_recipients(only_paid: bool = False):
+    """
+    Ommaviy xabar oluvchilar telegram_id ro'yxati (bloklanmaganlar).
+    only_paid=False -> ro'yxatdan o'tgan hamma (ismi to'ldirilganlar);
+    only_paid=True  -> faqat to'lovi tasdiqlangan ishtirokchilar.
+    """
+    async with pool.acquire() as conn:
+        if only_paid:
+            rows = await conn.fetch("""
+                SELECT DISTINCT u.telegram_id
+                FROM participants p JOIN users u ON u.id = p.user_id
+                WHERE u.is_blocked = FALSE
+            """)
+        else:
+            rows = await conn.fetch("""
+                SELECT DISTINCT telegram_id FROM users
+                WHERE is_blocked = FALSE AND COALESCE(full_name, '') <> ''
+            """)
+        return [r["telegram_id"] for r in rows]
 
 
 async def get_bot_stats():

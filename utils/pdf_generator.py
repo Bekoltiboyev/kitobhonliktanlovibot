@@ -8,7 +8,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from config import FONT_PATH_REGULAR, FONT_PATH_BOLD
+import datetime as _dt
+from config import FONT_PATH_REGULAR, FONT_PATH_BOLD, TZ_TASHKENT
 from utils.questions import get_user_shuffled_options
 
 FONT_NAME = "Helvetica"
@@ -22,6 +23,30 @@ if os.path.exists(FONT_PATH_REGULAR) and os.path.exists(FONT_PATH_BOLD):
         FONT_NAME_BOLD = "Custom-Bold"
     except Exception:
         pass
+
+
+
+# To'g'ri javoblar PDF da ko'rsatilsinmi? (False — yashirin)
+SHOW_CORRECT_ANSWERS = False
+
+def _now_tashkent() -> str:
+    """Hisobot sanasi — server (UTC) emas, Toshkent vaqtida."""
+    return _dt.datetime.now(TZ_TASHKENT).strftime("%Y-%m-%d %H:%M")
+
+
+def _fmt_score(v) -> str:
+    """15.0 -> '15', 14.5 -> '14.5'"""
+    try:
+        f = float(v)
+        return str(int(f)) if f == int(f) else f"{f:g}"
+    except Exception:
+        return str(v)
+
+
+def _fmt_duration(sec) -> str:
+    """Soniyani 'daq:son' ko'rinishida (masalan 12:05) — bir xil daqiqadagilarni ajratish uchun."""
+    sec = max(0, int(sec or 0))
+    return f"{sec // 60}:{sec % 60:02d}"
 
 
 def _styles():
@@ -49,13 +74,13 @@ def _styles():
 
 def _cell(text, style_sheet, red=False, bold=False):
     """Jadval katakchasi uchun matnni Paragraph obyektiga o'raydi (qatorga o'tishi uchun)."""
-    safe_text = str(text) if text else "-"
+    safe_text = str(text).strip() if text and str(text).strip() else "(ism kiritilmagan)"
     safe_text = safe_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     style_name = "TableCellRedUZ" if red else ("TableCellBoldUZ" if bold else "TableCellUZ")
     return Paragraph(safe_text, style_sheet[style_name])
 
 
-def generate_user_result_pdf(path: str, user: dict, result: dict, questions: list, user_id: int):
+def generate_user_result_pdf(path: str, user: dict, result: dict, questions: list, user_id: int, order: list = None):
     ss = _styles()
     doc = SimpleDocTemplate(path, pagesize=A4, topMargin=15 * mm, bottomMargin=15 * mm)
     elements = []
@@ -89,20 +114,36 @@ def generate_user_result_pdf(path: str, user: dict, result: dict, questions: lis
     elements.append(Paragraph("Savollar bo'yicha batafsil natija:", ss["NormalUZ"]))
     elements.append(Spacer(1, 6))
 
-    rows = [["#", "Sizning javobingiz", "To'g'ri javob", "Natija"]]
+    # SHOW_CORRECT_ANSWERS=False bo'lsa, to'g'ri javob harfi ko'rsatilmaydi —
+    # faqat foydalanuvchining javobi va natija (✔/✘) chiqadi. Shunda PDF
+    # tarqalsa ham savollarning to'g'ri javoblari oshkor bo'lmaydi.
+    if SHOW_CORRECT_ANSWERS:
+        rows = [["#", "Sizning javobingiz", "To'g'ri javob", "Natija"]]
+    else:
+        rows = [["#", "Sizning javobingiz", "Natija"]]
     answers = result.get("answers", {})
-    for i, q in enumerate(questions):
+    # Faqat shu foydalanuvchiga berilgan savollar (order) ko'rsatiladi, 1..N raqamlanadi.
+    indices = list(order) if order is not None else list(range(len(questions)))
+    for step, i in enumerate(indices):
         given = answers.get(str(i), "-")
-        _, correct = get_user_shuffled_options(user_id, i, q)
+        if i >= len(questions):
+            correct = "-"
+            given = "-"
+        else:
+            _, correct = get_user_shuffled_options(user_id, i, questions[i])
         if given == "-":
             ok = "-"
         elif given == correct:
             ok = "+" if FONT_NAME == "Helvetica" else "✔"
         else:
             ok = "X" if FONT_NAME == "Helvetica" else "✘"
-        rows.append([str(i + 1), given, correct, ok])
+        if SHOW_CORRECT_ANSWERS:
+            rows.append([str(step + 1), given, correct, ok])
+        else:
+            rows.append([str(step + 1), given, ok])
 
-    table = Table(rows, colWidths=[15 * mm, 45 * mm, 45 * mm, 25 * mm], repeatRows=1)
+    col_widths = [15 * mm, 45 * mm, 45 * mm, 25 * mm] if SHOW_CORRECT_ANSWERS else [15 * mm, 60 * mm, 40 * mm]
+    table = Table(rows, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
         ("FONTNAME", (0, 0), (-1, 0), FONT_NAME_BOLD),
@@ -115,7 +156,7 @@ def generate_user_result_pdf(path: str, user: dict, result: dict, questions: lis
     elements.append(table)
     elements.append(Spacer(1, 10))
     elements.append(Paragraph(
-        f"Hisobot yaratilgan sana: {time.strftime('%Y-%m-%d %H:%M', time.localtime())}",
+        f"Hisobot yaratilgan sana: {_now_tashkent()}",
         ss["SmallUZ"]))
 
     doc.build(elements)
@@ -130,7 +171,7 @@ def generate_admin_results_pdf(path: str, results: list):
                 Paragraph(f"Jami ishtirokchilar: {len(results)}", ss["NormalUZ"]),
                 Spacer(1, 10)]
 
-    rows = [["O'rin", "F.I.Sh", "Telegram ID", "To'g'ri", "Xato", "Bo'sh", "Ball", "Vaqt (daq)"]]
+    rows = [["O'rin", "F.I.Sh", "Telegram ID", "To'g'ri", "Xato", "Bo'sh", "Ball", "Vaqt (daq:son)"]]
     for idx, r in enumerate(results, start=1):
         duration = (r["finished_at"] - r["started_at"]) if r["finished_at"] and r["started_at"] else 0
         is_top3 = idx <= 3
@@ -141,11 +182,11 @@ def generate_admin_results_pdf(path: str, results: list):
             str(r["correct_count"]),
             str(r["wrong_count"]),
             str(r["unanswered_count"]),
-            str(r["score"]),
-            f"{int(duration // 60)}",
+            _fmt_score(r["score"]),
+            _fmt_duration(duration),
         ])
 
-    table = Table(rows, colWidths=[14 * mm, 45 * mm, 28 * mm, 15 * mm, 15 * mm, 15 * mm, 15 * mm, 20 * mm],
+    table = Table(rows, colWidths=[14 * mm, 45 * mm, 28 * mm, 14 * mm, 13 * mm, 13 * mm, 14 * mm, 25 * mm],
                    repeatRows=1)
     style = [
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
@@ -166,7 +207,7 @@ def generate_admin_results_pdf(path: str, results: list):
     elements.append(table)
     elements.append(Spacer(1, 10))
     elements.append(Paragraph(
-        f"Hisobot yaratilgan sana: {time.strftime('%Y-%m-%d %H:%M', time.localtime())}",
+        f"Hisobot yaratilgan sana: {_now_tashkent()}",
         ss["SmallUZ"]))
 
     doc.build(elements)
@@ -200,6 +241,8 @@ def generate_participants_pdf(path: str, participants: list):
     rows = [["#", "F.I.Sh", "Telegram ID", "Username", "Telefon", "To'lov sanasi", "Holat"]]
     for idx, p in enumerate(participants, start=1):
         approved_at = p.get("approved_at")
+        if approved_at is not None and getattr(approved_at, "tzinfo", None):
+            approved_at = approved_at.astimezone(TZ_TASHKENT)
         date_str = approved_at.strftime("%Y-%m-%d %H:%M") if approved_at else "-"
         phone_raw = str(p.get("phone") or "").strip()
         phone_display = phone_raw if phone_raw.startswith("+") else f"+{phone_raw}" if phone_raw else "-"
@@ -236,7 +279,7 @@ def generate_participants_pdf(path: str, participants: list):
     elements.append(table)
     elements.append(Spacer(1, 10))
     elements.append(Paragraph(
-        f"Hisobot yaratilgan sana: {time.strftime('%Y-%m-%d %H:%M', time.localtime())}",
+        f"Hisobot yaratilgan sana: {_now_tashkent()}",
         ss["SmallUZ"]))
 
     doc.build(elements)

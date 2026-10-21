@@ -14,6 +14,7 @@ import keyboards as kb
 from states import AdminFlow
 from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT
 from utils.questions import parse_excel_questions
+from utils import broadcast as bc
 
 router = Router()
 
@@ -96,15 +97,113 @@ async def cb_paid_pdf(callback: CallbackQuery):
         await callback.answer()
         return
 
+    await callback.message.answer("⏳ Hisobot tayyorlanmoqda, biroz kuting...")
+    await callback.answer()
+
     from utils.pdf_generator import generate_participants_pdf
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "tolov_qilganlar.pdf")
-        generate_participants_pdf(path, participants)
+        # DIQQAT: generate_participants_pdf ni ODDIY (to'g'ridan-to'g'ri)
+        # chaqirish YUZLAB-MINGLAB qatorli hisobotda BUTUN BOTNI bir necha
+        # soniyaga "muzlatib" qo'yardi — bu vaqtda hech qanday boshqa
+        # foydalanuvchiga (ro'yxatdan o'tish, to'lov, test) javob berilmasdi,
+        # chunki bot bitta oqimda (event loop) ishlaydi. asyncio.to_thread
+        # orqali PDF generatsiya ALOHIDA oqimda ishlaydi, bot esa shu vaqtda
+        # boshqa hamma bilan bemalol ishlashda davom etadi.
+        await asyncio.to_thread(generate_participants_pdf, path, participants)
         await callback.message.answer_document(
             FSInputFile(path),
             caption=f"💰 To'lov qilganlar hisoboti — jami {len(participants)} nafar",
         )
+
+
+
+# ---------- OMMAVIY XABAR YUBORISH ----------
+
+_BC_TITLES = {"all": "Hammaga xabar", "paid": "To'lov qilganlarga xabar"}
+
+
+async def _bc_start(callback: CallbackQuery, state: FSMContext, target: str):
+    if bc.is_running():
+        await callback.answer("Hozir boshqa ommaviy yuborish davom etmoqda. Tugashini kuting.", show_alert=True)
+        return
+    recipients = await db.get_broadcast_recipients(only_paid=(target == "paid"))
+    await state.clear()
+    await state.update_data(bc_target=target)
+    await state.set_state(AdminFlow.waiting_broadcast_message)
+    who = "to'lov qilgan ishtirokchilarga" if target == "paid" else "ro'yxatdan o'tgan barcha foydalanuvchilarga"
+    await callback.message.answer(
+        f"📢 <b>{_BC_TITLES[target]}</b>\n"
+        f"Qabul qiluvchilar: <b>{len(recipients)}</b> nafar ({who})\n\n"
+        "Yuboriladigan xabarni yuboring (matn, rasm yoki video — izoh bilan). "
+        "Avval sizga ko'rib chiqish uchun ko'rsatiladi.",
+        reply_markup=kb.admin_cancel_kb(),
+        parse_mode="HTML",
+    )
     await callback.answer()
+
+
+@router.callback_query(F.data == "admin_bc_all")
+@admin_only
+async def cb_bc_all(callback: CallbackQuery, state: FSMContext):
+    await _bc_start(callback, state, "all")
+
+
+@router.callback_query(F.data == "admin_bc_paid")
+@admin_only
+async def cb_bc_paid(callback: CallbackQuery, state: FSMContext):
+    await _bc_start(callback, state, "paid")
+
+
+@router.message(AdminFlow.waiting_broadcast_message)
+@admin_only
+async def process_bc_message(message: Message, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    target = data.get("bc_target", "all")
+    recipients = await db.get_broadcast_recipients(only_paid=(target == "paid"))
+    await state.update_data(bc_msg_id=message.message_id, bc_chat_id=message.chat.id)
+    await state.set_state(AdminFlow.confirm_broadcast)
+
+    await message.answer("👁 <b>Ko'rib chiqish</b> — foydalanuvchilarga aynan shunday ko'rinadi:", parse_mode="HTML")
+    try:
+        await bot.copy_message(message.chat.id, message.chat.id, message.message_id)
+    except Exception as e:
+        await state.clear()
+        await message.answer(f"❌ Bu turdagi xabarni yuborib bo'lmaydi: {e}")
+        return
+    await message.answer(
+        f"Yuborilsinmi? <b>{_BC_TITLES[target]}</b> — <b>{len(recipients)}</b> nafar qabul qiluvchi.\n"
+        f"Taxminiy vaqt: ~{max(1, len(recipients) // 25)} soniya.",
+        reply_markup=kb.broadcast_confirm_kb(),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data == "admin_bc_confirm")
+@admin_only
+async def cb_bc_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    msg_id = data.get("bc_msg_id")
+    chat_id = data.get("bc_chat_id")
+    target = data.get("bc_target", "all")
+    if not msg_id:
+        await callback.answer("Sessiya tugagan, qaytadan boshlang.", show_alert=True)
+        await state.clear()
+        return
+    if bc.is_running():
+        await callback.answer("Boshqa ommaviy yuborish davom etmoqda.", show_alert=True)
+        return
+
+    recipients = await db.get_broadcast_recipients(only_paid=(target == "paid"))
+    await state.clear()
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.answer("Yuborish boshlandi 🚀")
+    bc.start_background(
+        bc.run_broadcast(bot, callback.message.chat.id, chat_id, msg_id, recipients, _BC_TITLES[target])
+    )
 
 
 # ---------- TEST VAQTINI O'RNATISH ----------
@@ -442,94 +541,6 @@ async def process_block_reason(message: Message, state: FSMContext, bot: Bot):
         pass
     await message.reply(f"Foydalanuvchi {user['fullname']} bloklandi 🚫")
     await state.clear()
-
-
-# import json
-# import datetime as dt
-# from aiogram import types, F
-# from aiogram.filters import Command
-# import aiosqlite
-
-# import database as db
-# import config  # config ni to'g'ridan-to'g'ri import qilamiz
-# from utils.questions import load_questions
-
-
-# @router.message(Command("make_winner"))
-# async def cmd_make_winner(message: types.Message):
-#     admin_list = getattr(config, "ADMINS", []) or getattr(config, "ADMIN_IDS", [])
-#     single_admin = getattr(config, "ADMIN_ID", None)
-
-#     is_admin = (message.from_user.id in admin_list) or (message.from_user.id == single_admin)
-#     if not is_admin:
-#         return
-
-#     args = message.text.strip().split()
-#     if len(args) < 2:
-#         await message.answer("Format: <code>/make_winner TELEGRAM_ID</code>", parse_mode="HTML")
-#         return
-
-#     try:
-#         target_tg_id = int(args[1])
-#     except ValueError:
-#         await message.answer("❌ ID faqat raqam bo'lishi kerak.")
-#         return
-
-#     # 1. Foydalanuvchini bazadan tekshirish
-#     user = await db.get_user_by_telegram_id(target_tg_id)
-#     if not user:
-#         await message.answer(f"❌ <code>{target_tg_id}</code> bazada topilmadi. U avval botga /start bosishi kerak.")
-#         return
-
-#     u_data = dict(user)
-#     user_id = u_data.get("id", user[0])
-    
-#     full_name = (
-#         u_data.get("full_name") 
-#         or u_data.get("name") 
-#         or u_data.get("fio") 
-#         or u_data.get("username") 
-#         or f"User_{target_tg_id}"
-#     )
-
-#     # 2. Savollar sonini olish
-#     questions = load_questions()
-#     total_q = len(questions) if questions else 30
-#     order = list(range(total_q))
-    
-#     tz = getattr(config, "TZ_TASHKENT", dt.timezone(dt.timedelta(hours=5)))
-#     now_iso = dt.datetime.now(tz).isoformat()
-
-#     # 3. Faqat results jadvaliga 100% natija yozish
-#     db_name = getattr(db, "DB_NAME", "database.db")
-#     async with aiosqlite.connect(db_name) as conn:
-#         await conn.execute("DELETE FROM results WHERE user_id = ?", (user_id,))
-#         await conn.execute("""
-#             INSERT INTO results (user_id, question_order, current_index, score, status, started_at, finished_at)
-#             VALUES (?, ?, ?, ?, 'finished', ?, ?)
-#         """, (user_id, json.dumps(order), total_q, total_q, now_iso, now_iso))
-#         await conn.commit()
-
-#     await message.answer(
-#         f"🏆 <b>G'olib muvaffaqiyatli belgilandi!</b>\n\n"
-#         f"👤 <b>Ism:</b> {full_name}\n"
-#         f"🆔 <b>ID:</b> <code>{target_tg_id}</code>\n"
-#         f"📊 <b>Ball:</b> {total_q}/{total_q} (100%)\n"
-#         f"📌 <b>Holat:</b> finished (Yakunlangan)",
-#         parse_mode="HTML"
-#     )
-
-
-# ---------- HALI TASDIQLANMAGAN CHEKLARNI QAYTA CHIQARISH ----------
-#
-# MUAMMO: agar adminlar guruhida kimdir ko'plab xabarni birdan tanlab
-# o'chirsa (masalan Telegram'ning "bir nechtasini tanlash" funksiyasi
-# orqali), hali "kutilmoqda" (pending) holatidagi cheklar ham
-# ko'rinishdan yo'qolib qolishi mumkin. Chekning o'zi (fayl, foydalanuvchi
-# ma'lumoti, holati) BAZADA saqlanib qoladi — faqat Telegramdagi xabar
-# yo'qoladi. /pending buyrug'i shu "yo'qolgan" cheklarni bazadan qidirib,
-# ularni QAYTA, xuddi yangi kelgandek, tugmalari bilan birga chiqarib
-# beradi — hech qanday ma'lumot yo'qolmaydi.
 
 
 @router.message(Command("pending"))

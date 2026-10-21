@@ -10,6 +10,7 @@ from apscheduler.triggers.date import DateTrigger
 import database as db
 from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS
 from utils.questions import load_questions
+from utils.telegram_safe import safe_send_message
 import keyboards as kb
 from handlers.test import send_question, force_finish_user
 
@@ -46,16 +47,20 @@ async def _start_user_test_direct(bot: Bot, tg_id: int, user_id: int, questions:
         # test vaqti tekshiruvi va PDF hisobot yaratish xato berardi.
         await db.start_test(user_id, order)
 
-        await bot.send_message(
-            chat_id=tg_id,
-            text=(
-                "🏁 <b>DIQQAT, TEST BOSHLANDI!</b>\n"
-                f"⏱ <b>Vaqtingiz:</b> {TEST_DURATION_MINUTES} daqiqa"
-            ),
-            parse_mode="HTML"
+        # BITTA xabar: "test boshlandi" sarlavhasi + 1-savol birga yuboriladi.
+        # Ilgari ikkita alohida xabar ketardi (yuzlab odamda yuborish 2 baravar
+        # sekin bo'lardi, oxirgi odam ancha kech olardi).
+        prefix = (
+            "🏁 <b>DIQQAT, TEST BOSHLANDI!</b>\n"
+            f"⏱ <b>Vaqtingiz:</b> {TEST_DURATION_MINUTES} daqiqa\n\n"
         )
-
-        await send_question(bot, tg_id, user_id, 0)
+        sent = await send_question(bot, tg_id, user_id, 0, prefix=prefix)
+        if sent is None:
+            # Xabar yetkazib bo'lmadi (bloklagan/flood control tugadi) - shovqinli
+            # xato o'rniga shu yerda to'xtaymiz.
+            return
+        # Vaqt hisobi savol HAQIQATAN yetib borgan paytdan boshlanadi (adolat).
+        await db.reset_started_at(user_id)
     except Exception as e:
         logger.error(f"Foydalanuvchi {tg_id} ga test yuborishda xatolik: {e}")
 
@@ -127,11 +132,18 @@ async def _end_test_for_all(bot: Bot):
         logger.info("Vaqt tugaganda hech kim 'in_progress' holatida emas edi.")
         return
 
-    for row in in_progress:
-        try:
-            await force_finish_user(bot, row["user_id"], row["telegram_id"])
-        except Exception as e:
-            logger.error(f"Majburiy yakunlashda xatolik (user_id={row['user_id']}): {e}")
+    # Yuzlab ishtirokchi bo'lsa, ketma-ket yakunlash (har biriga PDF yasash + yuborish)
+    # bir necha daqiqa olardi. Endi nazorat ostida parallel: bir vaqtda ko'pi bilan 10 ta.
+    semaphore = asyncio.Semaphore(10)
+
+    async def _finish_one(row):
+        async with semaphore:
+            try:
+                await force_finish_user(bot, row["user_id"], row["telegram_id"])
+            except Exception as e:
+                logger.error(f"Majburiy yakunlashda xatolik (user_id={row['user_id']}): {e}")
+
+    await asyncio.gather(*(_finish_one(row) for row in in_progress))
 
     logger.info(f"{len(in_progress)} ta ishtirokchi majburiy yakunlandi.")
 
@@ -175,10 +187,29 @@ async def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     if saved_time_str:
         try:
             test_time = dt.datetime.fromisoformat(saved_time_str)
+            if test_time.tzinfo is None:
+                test_time = test_time.replace(tzinfo=TZ_TASHKENT)
             now = dt.datetime.now(TZ_TASHKENT)
             if test_time > now:
                 await reschedule_test_jobs(scheduler, bot, test_time)
                 logger.info(f"Rejalashtirilgan test vaqti yuklandi: {test_time}")
+            else:
+                # Bot test BOSHLANGANIDAN KEYIN qayta ishga tushgan (deploy, server
+                # qayta yuklanishi...). Ilgari tugatish vazifasi yo'qolib, javob
+                # bermay qolganlar hech qachon avtomatik yakunlanmasdi va natija
+                # PDF sini olmasdi. Endi tugatish vazifasi qayta o'rnatiladi
+                # (vaqti allaqachon o'tgan bo'lsa — darrov, bir marta ishga tushadi).
+                end_time = test_time + dt.timedelta(minutes=TEST_DURATION_MINUTES, seconds=60)
+                run_at = end_time if end_time > now else now + dt.timedelta(seconds=10)
+                scheduler.add_job(
+                    _end_test_for_all,
+                    DateTrigger(run_date=run_at, timezone=TZ_TASHKENT),
+                    args=[bot],
+                    id=TEST_END_JOB_ID,
+                    replace_existing=True,
+                    misfire_grace_time=3600,
+                )
+                logger.info(f"Test allaqachon boshlangan: tugatish vazifasi {run_at} ga qayta o'rnatildi")
         except Exception as e:
             logger.error(f"Scheduler yuklashda xatolik: {e}")
 

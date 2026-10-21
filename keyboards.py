@@ -147,6 +147,10 @@ def admin_panel_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="💰 To'lov qilganlar hisoboti (PDF)", callback_data="admin_paid_pdf"),
             ],
             [
+                InlineKeyboardButton(text="📢 Hammaga xabar", callback_data="admin_bc_all"),
+                InlineKeyboardButton(text="💰 To'lov qilganlarga xabar", callback_data="admin_bc_paid"),
+            ],
+            [
                 InlineKeyboardButton(text="🚫 Foydalanuvchini bloklash", callback_data="admin_block_user"),
                 InlineKeyboardButton(text="✅ Blokdan chiqarish", callback_data="admin_unblock_user"),
             ]
@@ -157,5 +161,15 @@ def admin_cancel_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_cancel")]
+        ]
+    )
+
+def broadcast_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Yuborish", callback_data="admin_bc_confirm"),
+                InlineKeyboardButton(text="❌ Bekor qilish", callback_data="admin_cancel"),
+            ]
         ]
     )

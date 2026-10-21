@@ -11,8 +11,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import database as db
 from config import BOT_TOKEN, TZ_TASHKENT
 from handlers import registration, contest, payment, admin, test, leaderboard
-from handlers import registration, contest, payment, admin, test, leaderboard, livescreen  
 from utils.scheduler import setup_scheduler, reschedule_test_jobs
+from utils.middlewares import FullnameGuard
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +23,10 @@ async def main():
 
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
+
+    # Ismi bazada bo'sh qolgan foydalanuvchilardan ismni so'raydi (routerlardan OLDIN)
+    dp.message.outer_middleware(FullnameGuard())
+    dp.callback_query.outer_middleware(FullnameGuard())
 
     # scheduler ni barcha handlerlarga aiogram DI orqali uzatamiz (masalan /settesttime uchun)
     scheduler = await setup_scheduler(bot)
@@ -44,7 +48,6 @@ async def main():
     dp.include_router(admin.router)
     dp.include_router(test.router)
     dp.include_router(leaderboard.router)
-    dp.include_router(livescreen.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Bot ishga tushdi...")

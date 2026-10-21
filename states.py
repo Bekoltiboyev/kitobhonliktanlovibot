@@ -18,3 +18,6 @@ class AdminFlow(StatesGroup):
     waiting_excel_file = State()
     waiting_manual_block = State()
     waiting_manual_unblock = State()
+    # Ommaviy xabar yuborish:
+    waiting_broadcast_message = State()
+    confirm_broadcast = State()
