@@ -44,15 +44,18 @@ async def _panel_text_and_kb():
     saved_time = await db.get_setting("test_start_time", "Belgilanmagan")
     reg_open = await db.is_registration_open()
     reg_status = "✅ Ochiq" if reg_open else "🔒 Yopiq"
+    pay_open = await db.is_payment_open()
+    pay_status = "✅ Ochiq" if pay_open else "🔒 Yopiq"
     text = (
         "🛠 <b>BOT BOSHQARUV PANELI (ADMIN)</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"⏰ <b>Test boshlanish vaqti:</b> <code>{saved_time}</code>\n"
         f"📝 <b>Ro'yxatdan o'tish:</b> {reg_status}\n"
+        f"💳 <b>To'lov qabuli:</b> {pay_status}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "Kerakli bo'limni tanlang 👇"
     )
-    return text, kb.admin_panel_kb(registration_open=reg_open)
+    return text, kb.admin_panel_kb(registration_open=reg_open, payment_open=pay_open)
 
 
 @router.message(Command("admin"))
@@ -77,6 +80,23 @@ async def cb_toggle_registration(callback: CallbackQuery):
         pass
     await callback.answer(
         "✅ Ro'yxatdan o'tish OCHILDI" if new_state else "🔒 Ro'yxatdan o'tish YOPILDI",
+        show_alert=True,
+    )
+
+
+@router.callback_query(F.data == "admin_toggle_pay")
+@admin_only
+async def cb_toggle_payment(callback: CallbackQuery):
+    """To'lov qabulini ochish/yopish. Allaqachon yuborilgan cheklarni ko'rib chiqish davom etadi."""
+    new_state = not await db.is_payment_open()
+    await db.set_payment_open(new_state)
+    text, markup = await _panel_text_and_kb()
+    try:
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    except Exception:
+        pass
+    await callback.answer(
+        "✅ To'lov qabuli OCHILDI" if new_state else "🔒 To'lov qabuli YOPILDI",
         show_alert=True,
     )
 

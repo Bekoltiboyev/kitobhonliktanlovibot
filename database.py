@@ -585,3 +585,14 @@ async def is_registration_open() -> bool:
 
 async def set_registration_open(is_open: bool):
     await set_setting("registration_open", "1" if is_open else "0")
+
+
+# ==================== TO'LOV QABULINI OCHISH / YOPISH ====================
+
+async def is_payment_open() -> bool:
+    """Yangi to'lovlar (chek yuborish) qabul qilinyaptimi? (standart: ha)"""
+    return (await get_setting("payment_open", "1")) != "0"
+
+
+async def set_payment_open(is_open: bool):
+    await set_setting("payment_open", "1" if is_open else "0")

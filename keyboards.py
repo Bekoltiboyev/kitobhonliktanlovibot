@@ -132,7 +132,8 @@ def question_kb(q_index: int, options: dict) -> InlineKeyboardMarkup:
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-def admin_panel_kb(registration_open: bool = True) -> InlineKeyboardMarkup:
+def admin_panel_kb(registration_open: bool = True, payment_open: bool = True) -> InlineKeyboardMarkup:
+    pay_text = "🔒 To'lov qabulini YOPISH" if payment_open else "🔓 To'lov qabulini OCHISH"
     reg_text = "🔒 Ro'yxatdan o'tishni YOPISH" if registration_open else "🔓 Ro'yxatdan o'tishni OCHISH"
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -149,6 +150,9 @@ def admin_panel_kb(registration_open: bool = True) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(text=reg_text, callback_data="admin_toggle_reg"),
+            ],
+            [
+                InlineKeyboardButton(text=pay_text, callback_data="admin_toggle_pay"),
             ],
             [
                 InlineKeyboardButton(text="📢 Hammaga xabar", callback_data="admin_bc_all"),

@@ -8,12 +8,20 @@ from aiogram.fsm.context import FSMContext
 import database as db
 import keyboards as kb
 from states import PaymentFlow
-from config import PAYMENT_CARD_NUMBER, PAYMENT_CARD_OWNER, ADMIN_GROUP_ID, BOOK_FILE_PATH
+from config import PAYMENT_CARD_NUMBER, PAYMENT_CARD_OWNER, ADMIN_GROUP_ID, BOOK_FILE_PATH, REQUIRED_CHANNEL
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 MAX_RECEIPT_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def _payment_closed_text() -> str:
+    return (
+        "🔒 <b>To'lov qabul qilish yakunlangan.</b>\n\n"
+        "Ishtirokchilar ro'yxati shakllangan. Yangiliklar va keyingi tanlovlar uchun "
+        f"kanalimizni kuzatib boring: {REQUIRED_CHANNEL}"
+    )
 
 
 from aiogram.filters import Command
@@ -39,6 +47,11 @@ async def cb_pay_now(message: Message, state: FSMContext):
 
     if await db.has_pending_or_approved_payment(user["id"]):
         await message.answer("Sizning to'lovingiz allaqachon yuborilgan yoki tasdiqlangan.")
+        return
+
+    if not await db.is_payment_open():
+        await state.clear()
+        await message.answer(_payment_closed_text(), parse_mode="HTML", reply_markup=kb.contest_intro_kb())
         return
 
     await state.set_state(PaymentFlow.waiting_receipt)
@@ -69,6 +82,11 @@ async def cb_pay_now(message: Message, state: FSMContext):
 async def process_receipt(message: Message, state: FSMContext, bot: Bot):
     user = await db.get_user_by_tg_id(message.from_user.id)
     if not user or user["is_blocked"]:
+        return
+
+    if not await db.is_payment_open():
+        await state.clear()
+        await message.answer(_payment_closed_text(), parse_mode="HTML", reply_markup=kb.contest_intro_kb())
         return
 
     if message.photo:
