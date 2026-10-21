@@ -6,9 +6,10 @@ import datetime as dt
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 import database as db
-from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS
+from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS, ADMIN_IDS
 from utils.questions import load_questions
 from utils.telegram_safe import safe_send_message
 import keyboards as kb
@@ -18,6 +19,67 @@ logger = logging.getLogger(__name__)
 
 TEST_START_JOB_ID = "test_start"
 TEST_END_JOB_ID = "test_end"
+REMINDER_JOB_ID = "daily_reminder"
+REMINDER_HOUR = 10  # har kuni soat 10:00 (Toshkent vaqti)
+
+_UZ_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul",
+              "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
+
+
+def _reminder_text(test_time: dt.datetime, today: dt.date) -> str:
+    days = (test_time.date() - today).days
+    date_s = f"{test_time.day}-{_UZ_MONTHS[test_time.month - 1]}, soat {test_time:%H:%M}"
+    if days <= 0:
+        head = f"🔔 <b>Bugun test kuni!</b>\nTest bugun soat <b>{test_time:%H:%M}</b> da boshlanadi."
+        tail = "Vaqtida botda bo'ling, internetingiz va telefoningiz zaryadini tekshirib qo'ying. Omad! 🍀"
+    elif days == 1:
+        head = f"🔔 <b>Test ertaga!</b>\nSana: <b>{date_s}</b>."
+        tail = "Kitobni yana bir bor ko'zdan kechirib, yaxshi dam oling. Omad! 🍀"
+    else:
+        head = f"🔔 <b>Eslatma: testgacha {days} kun qoldi.</b>\nSana: <b>{date_s}</b>."
+        tail = "Kitobni o'qib, tayyorgarlikni davom ettiring. Test shu bot orqali o'tkaziladi."
+    return f"{head}\n\n{tail}"
+
+
+async def _daily_reminder(bot: Bot):
+    """Har kuni faqat TO'LOV QILGANLARGA test haqida eslatma yuboradi (test kunigacha)."""
+    try:
+        saved = await db.get_setting("test_start_time")
+        if not saved:
+            return
+        test_time = dt.datetime.fromisoformat(saved)
+        if test_time.tzinfo is None:
+            test_time = test_time.replace(tzinfo=TZ_TASHKENT)
+        now = dt.datetime.now(TZ_TASHKENT)
+        if test_time <= now:
+            return  # test boshlangan/o'tgan — eslatma kerak emas
+        today = now.date()
+        if await db.get_setting("reminder_last_date") == today.isoformat():
+            return  # bugun allaqachon yuborilgan (qayta ishga tushganda takror ketmasin)
+        await db.set_setting("reminder_last_date", today.isoformat())
+
+        recipients = await db.get_broadcast_recipients(only_paid=True)
+        text = _reminder_text(test_time, today)
+        ok = fail = 0
+        for i in range(0, len(recipients), 25):
+            t0 = asyncio.get_event_loop().time()
+            res = await asyncio.gather(
+                *(safe_send_message(bot, tg, text, parse_mode="HTML") for tg in recipients[i:i + 25])
+            )
+            ok += sum(1 for r in res if r)
+            fail += sum(1 for r in res if not r)
+            spent = asyncio.get_event_loop().time() - t0
+            if spent < 1.0:
+                await asyncio.sleep(1.0 - spent)
+        logger.info(f"Kunlik eslatma: {ok} yetkazildi, {fail} yetmadi (jami {len(recipients)})")
+        for admin_id in ADMIN_IDS:
+            await safe_send_message(
+                bot, admin_id,
+                f"🔔 Kunlik eslatma yuborildi (faqat to'lov qilganlarga)\n"
+                f"✅ Yetkazildi: {ok}\n⚠️ Yetmadi (bloklagan va h.k.): {fail}\nJami: {len(recipients)}",
+            )
+    except Exception as e:
+        logger.error(f"Kunlik eslatmada xatolik: {e}")
 
 
 async def _start_user_test_direct(bot: Bot, tg_id: int, user_id: int, questions: list):
@@ -182,6 +244,16 @@ async def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     """Bot ishga tushganda bazadagi saqlangan vaqt bo'yicha rejalashtirgichni yoqish."""
     scheduler = AsyncIOScheduler(timezone=TZ_TASHKENT)
     scheduler.start()
+
+    scheduler.add_job(
+        _daily_reminder,
+        CronTrigger(hour=REMINDER_HOUR, minute=0, timezone=TZ_TASHKENT),
+        args=[bot],
+        id=REMINDER_JOB_ID,
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+    )
 
     saved_time_str = await db.get_setting("test_start_time")
     if saved_time_str:
