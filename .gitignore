@@ -30,3 +30,13 @@ temp/
 *.sql
 backup_old_files/
 venv_*/
+
+
+
+# .gitignore oxiriga qo'shing:
+backups/
+*.save
+*.save.*
+*.sql.gz
+*.dump
+data/questions.json

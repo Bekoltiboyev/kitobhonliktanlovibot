@@ -314,11 +314,19 @@ async def get_payment(payment_id: int):
         return dict(row) if row else None
 
 
-async def review_payment(payment_id: int, status: str, admin_id: int = None):
+async def review_payment(payment_id: int, status: str, admin_id: int = None) -> bool:
+    """
+    Chekni tasdiqlash/rad etish. ATOMIK: faqat hozir 'pending' bo'lgan chek yangilanadi.
+    Ikki admin bir vaqtda bossa yoki chek allaqachon ko'rib chiqilgan bo'lsa, False qaytadi
+    (tasdiqlangan to'lov keyin rad etilib ketmaydi, ikki marta xabar bormaydi).
+    """
     async with pool.acquire() as conn:
-        await conn.execute("""
-            UPDATE payments SET status=$1, admin_id=$2, updated_at=NOW() WHERE id=$3
+        row = await conn.fetchrow("""
+            UPDATE payments SET status=$1, admin_id=$2, updated_at=NOW()
+            WHERE id=$3 AND status='pending'
+            RETURNING id
         """, status, admin_id, payment_id)
+        return row is not None
 
 
 async def get_pending_payments():

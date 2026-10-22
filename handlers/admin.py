@@ -1,3 +1,4 @@
+import html
 import inspect
 import os
 import asyncio
@@ -307,13 +308,14 @@ async def cb_upload_excel_start(callback: CallbackQuery, state: FSMContext):
 @admin_only
 async def process_excel_upload(message: Message, state: FSMContext, bot: Bot):
     doc = message.document
-    if not (doc.file_name.endswith(".xlsx") or doc.file_name.endswith(".xls")):
+    safe_name = os.path.basename(doc.file_name or "")
+    if not (safe_name.endswith(".xlsx") or safe_name.endswith(".xls")):
         await message.answer("Iltimos, faqat <b>.xlsx</b> formatdagi fayl yuboring.", parse_mode="HTML")
         return
 
     msg = await message.answer("⏳ Fayl tekshirilmoqda...")
     with tempfile.TemporaryDirectory() as tmp_dir:
-        file_path = os.path.join(tmp_dir, doc.file_name)
+        file_path = os.path.join(tmp_dir, safe_name)
         await bot.download(doc, destination=file_path)
         success, info_text, count = parse_excel_questions(file_path)
 
@@ -429,21 +431,30 @@ async def cb_approve(callback: CallbackQuery, bot: Bot):
         await callback.answer("Bu chek allaqachon ko'rib chiqilgan.", show_alert=True)
         return
 
-    await db.review_payment(payment_id, "approved", callback.from_user.id)
+    if not await db.review_payment(payment_id, "approved", callback.from_user.id):
+        await callback.answer("Bu chek allaqachon ko'rib chiqilgan.", show_alert=True)
+        return
     await db.add_participant(payment["user_id"])
 
     user = await db.get_user_by_id(payment["user_id"])
-    await callback.message.edit_caption(
-        caption=callback.message.caption + f"\n\n✅ <b>TASDIQLANDI</b> (Admin: {callback.from_user.full_name})",
-        reply_markup=None,
-        parse_mode="HTML"
-    )
-    await bot.send_message(
-        user["telegram_id"],
-        "✅ To'lovingiz tasdiqlandi! Endi kitobingizni yuklab olishingiz "
-        "yoki testgacha qancha vaqt qolganini bilish uchun pastdagi tugmalardan foydalaning 👇",
-        reply_markup=kb.post_approval_kb(),
-    )
+    try:
+        await callback.message.edit_caption(
+            caption=(callback.message.caption or "")
+            + f"\n\n✅ <b>TASDIQLANDI</b> (Admin: {html.escape(callback.from_user.full_name or '', quote=False)})",
+            reply_markup=None,
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    try:
+        await bot.send_message(
+            user["telegram_id"],
+            "✅ To'lovingiz tasdiqlandi! Endi kitobingizni yuklab olishingiz "
+            "yoki testgacha qancha vaqt qolganini bilish uchun pastdagi tugmalardan foydalaning 👇",
+            reply_markup=kb.post_approval_kb(),
+        )
+    except Exception:
+        pass
     await callback.answer("Tasdiqlandi ✅")
 
 
@@ -457,14 +468,18 @@ async def _reject_payment(bot: Bot, payment_id: int, admin_id: int, reason_text:
     payment = await db.get_payment(payment_id)
     if not payment:
         return False
-    await db.review_payment(payment_id, "rejected", admin_id)
+    if not await db.review_payment(payment_id, "rejected", admin_id):
+        return False  # allaqachon tasdiqlangan/rad etilgan — qayta o'zgartirilmaydi
     user = await db.get_user_by_id(payment["user_id"])
-    await bot.send_message(
-        user["telegram_id"],
-        f"❌ To'lov chekingiz rad etildi.\nSabab: {reason_text}\n\n"
-        "Iltimos, to'lovni qayta tekshirib, to'g'ri chekni qayta yuboring.",
-        reply_markup=kb.payment_kb(),
-    )
+    try:
+        await bot.send_message(
+            user["telegram_id"],
+            f"❌ To'lov chekingiz rad etildi.\nSabab: {html.escape(reason_text or '', quote=False)}\n\n"
+            "Iltimos, to'lovni qayta tekshirib, to'g'ri chekni qayta yuboring.",
+            reply_markup=kb.payment_kb(),
+        )
+    except Exception:
+        pass
     return True
 
 
@@ -515,7 +530,7 @@ async def cb_reject_reason_selected(callback: CallbackQuery, bot: Bot):
     await _reject_payment(bot, payment_id, callback.from_user.id, reason_text)
     try:
         await callback.message.edit_caption(
-            caption=(callback.message.caption or "") + f"\n\n❌ <b>RAD ETILDI</b>\nSabab: {reason_text}",
+            caption=(callback.message.caption or "") + f"\n\n❌ <b>RAD ETILDI</b>\nSabab: {html.escape(reason_text, quote=False)}",
             parse_mode="HTML",
         )
     except Exception:
@@ -547,6 +562,7 @@ async def process_reject_reason(message: Message, state: FSMContext, bot: Bot):
     ok = await _reject_payment(bot, payment_id, message.from_user.id, message.text)
     if not ok:
         await state.clear()
+        await message.reply("Bu chek allaqachon ko'rib chiqilgan (yoki topilmadi) — o'zgartirilmadi.")
         return
 
     await message.reply("Foydalanuvchiga xabar yuborildi ❌")
@@ -581,7 +597,7 @@ async def process_block_reason(message: Message, state: FSMContext, bot: Bot):
     try:
         await bot.send_message(
             user["telegram_id"],
-            f"⛔️ Siz botdan foydalanish huquqidan mahrum qilindingiz.\nSabab: {message.text}",
+            f"⛔️ Siz botdan foydalanish huquqidan mahrum qilindingiz.\nSabab: {html.escape(message.text or '', quote=False)}",
         )
     except Exception:
         pass
