@@ -15,7 +15,7 @@ import keyboards as kb
 from utils.questions import load_questions, get_user_shuffled_options
 from utils.telegram_safe import safe_send_message, safe_send_document, safe_call
 from utils.pdf_generator import generate_user_result_pdf
-from config import TEST_DURATION_MINUTES, TOTAL_QUESTIONS, NEGATIVE_MARK, TZ_TASHKENT
+from config import TEST_DURATION_MINUTES, TOTAL_QUESTIONS, NEGATIVE_MARK, TZ_TASHKENT, PER_USER_SHUFFLE
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -69,7 +69,8 @@ async def begin_test_for_user(bot: Bot, user_id: int, telegram_id: int):
     # Savollar hovuzidan (masalan 300-500 ta) har bir user uchun faqat
     # TOTAL_QUESTIONS (config.py, standart 60) tasi tasodifiy tanlanadi.
     sample_size = min(TOTAL_QUESTIONS, len(questions))
-    order = random.sample(range(len(questions)), sample_size)
+    order = (random.sample(range(len(questions)), sample_size) if PER_USER_SHUFFLE
+             else list(range(sample_size)))
 
     await db.start_test(user_id, order)
     try:

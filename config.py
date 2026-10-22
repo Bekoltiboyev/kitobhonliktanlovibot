@@ -62,6 +62,12 @@ TEST_DURATION_MINUTES = int(os.getenv("TEST_DURATION_MINUTES", "60"))
 TOTAL_QUESTIONS = int(os.getenv("TOTAL_QUESTIONS", "60"))
 NEGATIVE_MARK = float(os.getenv("NEGATIVE_MARK", "0"))
 
+# Savollar va variantlar tartibi:
+#   PER_USER_SHUFFLE=0 (standart) -> HAMMAGA BIR XIL: savollar Excel'dagi tartibda (birinchi
+#                                    TOTAL_QUESTIONS tasi), variantlar ham hamma uchun bir xil.
+#   PER_USER_SHUFFLE=1            -> har bir ishtirokchi uchun alohida tasodifiy tartib.
+PER_USER_SHUFFLE = os.getenv("PER_USER_SHUFFLE", "0").strip() == "1"
+
 # Fayl va baza yo'llari
 DB_PATH = os.getenv("DB_PATH", "bot_database.db")
 QUESTIONS_FILE = os.getenv("QUESTIONS_FILE", "data/questions.json")

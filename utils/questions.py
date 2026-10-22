@@ -2,7 +2,7 @@ import json
 import os
 import random
 import openpyxl
-from config import QUESTIONS_FILE
+from config import QUESTIONS_FILE, PER_USER_SHUFFLE
 
 
 def get_user_shuffled_options(user_id: int, real_q_index: int, q: dict):
@@ -18,6 +18,11 @@ def get_user_shuffled_options(user_id: int, real_q_index: int, q: dict):
 
     Natija: (aralashtirilgan_options_dict, shu_user_uchun_togri_javob_harfi)
     """
+    if not PER_USER_SHUFFLE:
+        # Hammaga bir xil variantlar: Excel yuklanayotganda variantlar bir marta
+        # aralashtirib saqlangan (to'g'ri javob harflari tasodifiy taqsimlangan).
+        return dict(q["options"]), q["correct"]
+
     rng = random.Random(f"{user_id}:{real_q_index}")
     letters = ["A", "B", "C", "D"]
     pairs = [(q["options"][letter], letter == q["correct"]) for letter in letters]
@@ -82,7 +87,8 @@ def parse_excel_questions(file_path: str) -> tuple[bool, str, int]:
                 (opt_c, correct_ans == "C"),
                 (opt_d, correct_ans == "D"),
             ]
-            random.shuffle(options_with_flag)
+            if PER_USER_SHUFFLE:
+                random.shuffle(options_with_flag)
 
             shuffled_options = {}
             shuffled_correct = None

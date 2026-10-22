@@ -9,7 +9,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 
 import database as db
-from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS, ADMIN_IDS
+from config import TZ_TASHKENT, TEST_DURATION_MINUTES, TOTAL_QUESTIONS, ADMIN_IDS, PER_USER_SHUFFLE
 from utils.questions import load_questions
 from utils.telegram_safe import safe_send_message
 import keyboards as kb
@@ -99,7 +99,8 @@ async def _start_user_test_direct(bot: Bot, tg_id: int, user_id: int, questions:
         # random.sample takrorlanmaydigan, tasodifiy tartibda tanlaydi - shu bilan
         # bir vaqtning o'zida ham savol soni cheklanadi, ham tartibi aralashtiriladi.
         sample_size = min(TOTAL_QUESTIONS, total_q)
-        order = random.sample(range(total_q), sample_size)
+        order = (random.sample(range(total_q), sample_size) if PER_USER_SHUFFLE
+                 else list(range(sample_size)))
 
         # DIQQAT: db.start_test() ichida started_at avtomatik va TO'G'RI turda
         # (epoch son — time.time()) saqlanadi. Oldin bu yerda alohida
