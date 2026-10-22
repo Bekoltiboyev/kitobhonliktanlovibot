@@ -174,7 +174,7 @@ def generate_admin_results_pdf(path: str, results: list):
     rows = [["O'rin", "F.I.Sh", "Telegram ID", "To'g'ri", "Xato", "Bo'sh", "Ball", "Vaqt (daq:son)"]]
     for idx, r in enumerate(results, start=1):
         duration = (r["finished_at"] - r["started_at"]) if r["finished_at"] and r["started_at"] else 0
-        is_top3 = idx <= 3
+        is_top3 = idx <= 5
         rows.append([
             str(idx),
             _cell(r["fullname"], ss, bold=is_top3),
@@ -186,7 +186,7 @@ def generate_admin_results_pdf(path: str, results: list):
             _fmt_duration(duration),
         ])
 
-    table = Table(rows, colWidths=[14 * mm, 45 * mm, 28 * mm, 14 * mm, 13 * mm, 13 * mm, 14 * mm, 25 * mm],
+    table = Table(rows, colWidths=[14 * mm, 42 * mm, 28 * mm, 14 * mm, 13 * mm, 13 * mm, 14 * mm, 28 * mm],
                    repeatRows=1)
     style = [
         ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
@@ -197,7 +197,13 @@ def generate_admin_results_pdf(path: str, results: list):
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f5f5")]),
     ]
-    medal_colors = {1: colors.HexColor("#ffd700"), 2: colors.HexColor("#c0c0c0"), 3: colors.HexColor("#cd7f32")}
+    medal_colors = {
+        1: colors.HexColor("#ffd700"),  # oltin
+        2: colors.HexColor("#c0c0c0"),  # kumush
+        3: colors.HexColor("#cd7f32"),  # bronza
+        4: colors.HexColor("#b7e4c7"),  # ochiq yashil
+        5: colors.HexColor("#bde0fe"),  # ochiq ko'k
+    }
     for place, color in medal_colors.items():
         if place < len(rows):
             style.append(("BACKGROUND", (0, place), (-1, place), color))
