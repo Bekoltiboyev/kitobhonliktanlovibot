@@ -122,11 +122,13 @@ def post_approval_kb() -> ReplyKeyboardMarkup:
 
 
 def question_kb(q_index: int, options: dict) -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton(text=f"{k}) {v}", callback_data=f"ans_{q_index}_{k}")]
-        for k, v in options.items()
+    # Variantlarning TO'LIQ matni savol xabarida turadi (tugmada uzun matn kesilib
+    # qolardi). Tugmalarda faqat harflar: bitta qatorda A B C D.
+    row = [
+        InlineKeyboardButton(text=str(k), callback_data=f"ans_{q_index}_{k}")
+        for k in options.keys()
     ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(inline_keyboard=[row])
 
 
 

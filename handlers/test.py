@@ -1,4 +1,5 @@
 import os
+import html
 import json
 import random
 import tempfile
@@ -110,7 +111,13 @@ async def send_question(bot: Bot, telegram_id: int, user_id: int, step_index: in
     q = questions[real_q_index]
     user_options, _ = get_user_shuffled_options(user_id, real_q_index, q)
 
-    text = f"{prefix}❓ <b>{step_index + 1}/{len(order)}-savol</b>\n\n{q['question']}"
+    options_text = "\n\n".join(
+        f"<b>{k})</b> {html.escape(str(v), quote=False)}" for k, v in user_options.items()
+    )
+    text = (
+        f"{prefix}❓ <b>{step_index + 1}/{len(order)}-savol</b>\n\n"
+        f"{html.escape(str(q['question']), quote=False)}\n\n{options_text}"
+    )
     # max_retries=10: ko'p odam bir vaqtda javob berganda Telegram "kuting" desa,
     # savol YO'QOLMASLIGI uchun kutib, qayta-qayta urinadi (aks holda foydalanuvchi
     # keyingi savolsiz qotib qolardi).
