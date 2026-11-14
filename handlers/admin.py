@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 import database as db
 import keyboards as kb
 from states import AdminFlow
-from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT
+from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT, TOTAL_QUESTIONS
 from utils.questions import parse_excel_questions
 from utils import broadcast as bc
 
@@ -297,7 +297,7 @@ async def process_new_test_time(message: Message, state: FSMContext, bot: Bot, s
 async def cb_upload_excel_start(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AdminFlow.waiting_excel_file)
     await callback.message.answer(
-        "📥 60 ta savol joylashtirilgan <b>.xlsx</b> Excel faylni yuboring:",
+        f"📥 Kamida {TOTAL_QUESTIONS} ta savol joylashtirilgan <b>.xlsx</b> Excel faylni yuboring:",
         reply_markup=kb.admin_cancel_kb(),
         parse_mode="HTML"
     )
