@@ -12,7 +12,7 @@ import database as db
 from config import BOT_TOKEN, TZ_TASHKENT
 from handlers import registration, contest, payment, admin, test, leaderboard
 from utils.scheduler import setup_scheduler, reschedule_test_jobs
-from utils.middlewares import FullnameGuard
+from utils.middlewares import FullnameGuard, SubscriptionGuard
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +23,10 @@ async def main():
 
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
+
+    # Avval kanalga obuna tekshiriladi: obuna bo'lmaguncha bot hech narsaga javob bermaydi
+    dp.message.outer_middleware(SubscriptionGuard())
+    dp.callback_query.outer_middleware(SubscriptionGuard())
 
     # Ismi bazada bo'sh qolgan foydalanuvchilardan ismni so'raydi (routerlardan OLDIN)
     dp.message.outer_middleware(FullnameGuard())
