@@ -34,9 +34,11 @@ logger = logging.getLogger(__name__)
 
 @router.message(F.text == "⏳ Testgacha qancha vaqt qoldi?")
 async def cb_time_left(message: Message):
+    _u = await db.get_user_by_tg_id(message.from_user.id)
+    _kb = kb.post_approval_kb() if (_u and await db.is_participant(_u["id"])) else None
     test_time_str = await db.get_setting("test_start_time")
     if not test_time_str:
-        await message.answer("Test vaqti hali e'lon qilinmagan.")
+        await message.answer("Test vaqti hali e'lon qilinmagan.", reply_markup=_kb)
         return
 
     test_time = dt.datetime.fromisoformat(test_time_str)
@@ -48,7 +50,7 @@ async def cb_time_left(message: Message):
     now = dt.datetime.now(TZ_TASHKENT)
 
     if now >= test_time:
-        await message.answer("Test allaqachon boshlangan yoki yakunlangan!")
+        await message.answer("Test allaqachon boshlangan yoki yakunlangan!", reply_markup=_kb)
         return
 
     delta = test_time - now
@@ -56,7 +58,8 @@ async def cb_time_left(message: Message):
     hours, rem = divmod(rem, 3600)
     minutes, _ = divmod(rem, 60)
     await message.answer(
-        f"⏳ Testgacha: {days} kun {hours} soat {minutes} daqiqa qoldi"
+        f"⏳ Testgacha: {days} kun {hours} soat {minutes} daqiqa qoldi",
+        reply_markup=_kb,
     )
 
 

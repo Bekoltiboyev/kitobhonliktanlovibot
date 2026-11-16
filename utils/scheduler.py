@@ -64,7 +64,7 @@ async def _daily_reminder(bot: Bot):
         for i in range(0, len(recipients), 25):
             t0 = asyncio.get_event_loop().time()
             res = await asyncio.gather(
-                *(safe_send_message(bot, tg, text, parse_mode="HTML") for tg in recipients[i:i + 25])
+                *(safe_send_message(bot, tg, text, parse_mode="HTML", reply_markup=kb.post_approval_kb()) for tg in recipients[i:i + 25])
             )
             ok += sum(1 for r in res if r)
             fail += sum(1 for r in res if not r)

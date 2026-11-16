@@ -115,6 +115,7 @@ def post_approval_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📖 Kitobni yuklab olish")],
+            [KeyboardButton(text="📄 Tanlov nizomi")],
             [KeyboardButton(text="⏳ Testgacha qancha vaqt qoldi?")],
         ],
         resize_keyboard=True,
@@ -159,6 +160,10 @@ def admin_panel_kb(registration_open: bool = True, payment_open: bool = True) ->
             [
                 InlineKeyboardButton(text="📢 Hammaga xabar", callback_data="admin_bc_all"),
                 InlineKeyboardButton(text="💰 To'lov qilganlarga xabar", callback_data="admin_bc_paid"),
+            ],
+            [
+                InlineKeyboardButton(text="📄 Nizomni almashtirish", callback_data="admin_set_nizom"),
+                InlineKeyboardButton(text="📖 Kitobni almashtirish", callback_data="admin_set_book"),
             ],
             [
                 InlineKeyboardButton(text="🚫 Foydalanuvchini bloklash", callback_data="admin_block_user"),

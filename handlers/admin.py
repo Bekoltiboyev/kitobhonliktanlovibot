@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 import database as db
 import keyboards as kb
 from states import AdminFlow
-from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT, TOTAL_QUESTIONS
+from config import ADMIN_IDS, ADMIN_GROUP_ID, TZ_TASHKENT, TOTAL_QUESTIONS, BOOK_FILE_PATH, NIZOM_FILE_PATH
 from utils.questions import parse_excel_questions
 from utils import broadcast as bc
 
@@ -329,6 +329,100 @@ async def process_excel_upload(message: Message, state: FSMContext, bot: Bot):
             await state.clear()
         else:
             await msg.edit_text(f"❌ <b>Xatolik yuz berdi:</b>\n{info_text}", parse_mode="HTML")
+
+
+# ---------- NIZOM VA KITOBNI ALMASHTIRISH ----------
+
+# Telegram bot orqali yuklab olinadigan fayl hajmi chegarasi — 20 MB
+_MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
+
+
+async def _save_pdf_atomically(bot: Bot, doc, dest_path: str):
+    """Yuborilgan PDF ni tekshirib, manzilga XAVFSIZ saqlaydi (eskisi faqat yangisi to'liq tayyor bo'lgandan keyin almashadi).
+
+    Qaytaradi: (True, hajm_MB) yoki (False, xato_matni)
+    """
+    name = (doc.file_name or "").lower()
+    if not (name.endswith(".pdf") or doc.mime_type == "application/pdf"):
+        return False, "Iltimos, faqat <b>.pdf</b> formatdagi fayl yuboring."
+    if doc.file_size and doc.file_size > _MAX_DOWNLOAD_BYTES:
+        return False, "Fayl juda katta: Telegram bot orqali 20 MB gacha fayl qabul qilinadi."
+
+    dest_dir = os.path.dirname(os.path.abspath(dest_path))
+    os.makedirs(dest_dir, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=dest_dir, suffix=".part")
+    os.close(fd)
+    try:
+        await bot.download(doc, destination=tmp_path)
+        with open(tmp_path, "rb") as f:
+            head = f.read(5)
+        if head != b"%PDF-":
+            return False, "Bu fayl haqiqiy PDF emas (buzilgan bo'lishi mumkin). Boshqa fayl yuboring."
+        size_mb = os.path.getsize(tmp_path) / (1024 * 1024)
+        os.replace(tmp_path, dest_path)   # atomik almashtirish
+        tmp_path = None
+        return True, f"{size_mb:.1f}"
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+@router.callback_query(F.data == "admin_set_nizom")
+@admin_only
+async def cb_set_nizom_start(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AdminFlow.waiting_nizom_file)
+    await callback.message.answer(
+        "📄 Yangi <b>nizom</b> faylini (.pdf) yuboring. Eski nizom o'rniga almashtiriladi.",
+        reply_markup=kb.admin_cancel_kb(), parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(AdminFlow.waiting_nizom_file, F.document)
+@admin_only
+async def process_nizom_upload(message: Message, state: FSMContext, bot: Bot):
+    ok, info = await _save_pdf_atomically(bot, message.document, NIZOM_FILE_PATH)
+    if not ok:
+        await message.answer(f"❌ {info}", parse_mode="HTML")
+        return
+    await db.set_setting("nizom_file_id", "")   # eski Telegram fayl belgisini tozalaymiz
+    await state.clear()
+    await message.answer(f"✅ <b>Nizom almashtirildi</b> ({info} MB).\nEndi to'lov qilganlarga yangi nizom beriladi.", parse_mode="HTML")
+
+
+@router.callback_query(F.data == "admin_set_book")
+@admin_only
+async def cb_set_book_start(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AdminFlow.waiting_book_file)
+    await callback.message.answer(
+        "📖 Yangi <b>kitob</b> faylini (.pdf) yuboring. Eski kitob o'rniga almashtiriladi.\n"
+        "Diqqat: kitob olishni yangi boshlaganlarga yangi fayl beriladi.",
+        reply_markup=kb.admin_cancel_kb(), parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(AdminFlow.waiting_book_file, F.document)
+@admin_only
+async def process_book_upload(message: Message, state: FSMContext, bot: Bot):
+    ok, info = await _save_pdf_atomically(bot, message.document, BOOK_FILE_PATH)
+    if not ok:
+        await message.answer(f"❌ {info}", parse_mode="HTML")
+        return
+    await db.set_setting("book_file_id", "")    # eski kitobning Telegram fayl belgisi — tozalanadi
+    await state.clear()
+    await message.answer(f"✅ <b>Kitob almashtirildi</b> ({info} MB).\nEndi to'lov qilganlar yangi kitobni oladi.", parse_mode="HTML")
+
+
+@router.message(AdminFlow.waiting_nizom_file)
+@router.message(AdminFlow.waiting_book_file)
+@admin_only
+async def process_pdf_wrong_type(message: Message):
+    await message.answer("Iltimos, <b>.pdf</b> faylni hujjat (fayl) sifatida yuboring.", parse_mode="HTML",
+                         reply_markup=kb.admin_cancel_kb())
 
 
 # ---------- YAKUNIY PDF HISOBOT ----------

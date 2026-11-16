@@ -48,7 +48,7 @@ BOOK_PRICE = os.getenv("BOOK_PRICE", "0 so'm")
 PRIZE_TEXT = (
     "🎁 <b>G‘OLIBLAR UCHUN QIMMATBAHO SOVG‘ALAR</b>\n\n"
     "  🥇 <b>1-o‘rin (1 nafar):</b> HP noutbuk, Intel Core i5, 8/256 💻\n"
-    "  🥈 <b>2-o‘rin (1 nafar):</b> Smartfon HONOR X8e, 6/128 GB 📱\n"
+    "  🥈 <b>2-o‘rin (1 nafar):</b> Smartfon HONOR X8e, 128 GB 📱\n"
     "  🥉 <b>3-o‘rin (1 nafar):</b> Planshet Samsung Galaxy Tab A9 📱\n"
     "  🏅 <b>4-o‘rin (1 nafar):</b> Smart televizor (43 dyuymli) 📺\n"
     "  🏅 <b>5-o‘rin (1 nafar):</b> Smart televizor (32 dyuymli) 📺\n"
@@ -72,5 +72,6 @@ PER_USER_SHUFFLE = os.getenv("PER_USER_SHUFFLE", "0").strip() == "1"
 DB_PATH = os.getenv("DB_PATH", "bot_database.db")
 QUESTIONS_FILE = os.getenv("QUESTIONS_FILE", "data/questions.json")
 BOOK_FILE_PATH = os.getenv("BOOK_FILE_PATH", "data/book.pdf")
+NIZOM_FILE_PATH = os.getenv("NIZOM_FILE_PATH", "data/nizom.pdf")
 FONT_PATH_REGULAR = os.getenv("FONT_PATH_REGULAR", "data/fonts/DejaVuSans.ttf")
 FONT_PATH_BOLD = os.getenv("FONT_PATH_BOLD", "data/fonts/DejaVuSans-Bold.ttf")

@@ -16,6 +16,8 @@ class AdminFlow(StatesGroup):
     # Yangi holatlar:
     waiting_test_time = State()
     waiting_excel_file = State()
+    waiting_nizom_file = State()
+    waiting_book_file = State()
     waiting_manual_block = State()
     waiting_manual_unblock = State()
     # Ommaviy xabar yuborish:

@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 import database as db
 import keyboards as kb
 from states import PaymentFlow
-from config import PAYMENT_CARD_NUMBER, PAYMENT_CARD_OWNER, ADMIN_GROUP_ID, BOOK_FILE_PATH, REQUIRED_CHANNEL
+from config import PAYMENT_CARD_NUMBER, PAYMENT_CARD_OWNER, ADMIN_GROUP_ID, BOOK_FILE_PATH, NIZOM_FILE_PATH, REQUIRED_CHANNEL
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -206,6 +206,7 @@ async def cb_download_book(message: Message, bot: Bot):
                 cached_file_id,
                 caption="📖 Kitobingiz tayyor! Uni tarqatish qat'iyan taqiqlanadi.",
                 protect_content=True,
+                reply_markup=kb.post_approval_kb(),
             )
             await db.mark_book_downloaded(user["id"])
             return
@@ -221,7 +222,36 @@ async def cb_download_book(message: Message, bot: Bot):
         FSInputFile(BOOK_FILE_PATH),
         caption="📖 Kitobingiz tayyor! Uni tarqatish qat'iyan taqiqlanadi.",
         protect_content=True,
+        reply_markup=kb.post_approval_kb(),
     )
     # File ID ni saqlab qo'yamiz
     await db.set_setting("book_file_id", sent_doc.document.file_id)
     await db.mark_book_downloaded(user["id"])
+
+
+@router.message(F.text == "📄 Tanlov nizomi")
+@router.message(Command("nizom"))
+async def cb_download_nizom(message: Message, bot: Bot):
+    """Tanlov nizomi — faqat to'lovi TASDIQLANGAN ishtirokchilarga beriladi."""
+    user = await db.get_user_by_tg_id(message.from_user.id)
+    if not user or not await db.is_participant(user["id"]):
+        await message.answer("Nizom to'lov tasdiqlangandan keyin beriladi.")
+        return
+
+    caption = "📄 Tanlov nizomi"
+    cached_file_id = await db.get_setting("nizom_file_id")
+    if cached_file_id:
+        try:
+            await bot.send_document(message.from_user.id, cached_file_id, caption=caption,
+                                    reply_markup=kb.post_approval_kb())
+            return
+        except Exception:
+            pass
+
+    if not os.path.exists(NIZOM_FILE_PATH):
+        await message.answer("Nizom fayli hali yuklanmagan. Tez orada qo'yiladi.", reply_markup=kb.post_approval_kb())
+        return
+
+    sent_doc = await bot.send_document(message.from_user.id, FSInputFile(NIZOM_FILE_PATH), caption=caption,
+                                       reply_markup=kb.post_approval_kb())
+    await db.set_setting("nizom_file_id", sent_doc.document.file_id)
