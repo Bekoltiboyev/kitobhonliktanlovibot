@@ -47,11 +47,11 @@ BOOK_PRICE = os.getenv("BOOK_PRICE", "0 so'm")
 # Mukofotlar (e'lon matnida ishlatiladi)
 PRIZE_TEXT = (
     "🎁 <b>G‘OLIBLAR UCHUN QIMMATBAHO SOVG‘ALAR</b>\n\n"
-    "  🥇 <b>1-o‘rin:</b> Noutbuk 💻\n"
-    "  🥈 <b>2-o‘rin:</b> Smartfon 📱\n"
-    "  🥉 <b>3-o‘rin:</b> Planshet 📱\n"
-    "  🏅 <b>4-o‘rin:</b> 43 dyuymli televizor 📺\n"
-    "  🏅 <b>5-o‘rin:</b> 32 dyuymli televizor 📺\n"
+    "  🥇 <b>1-o‘rin (1 nafar):</b> HP noutbuk, Intel Core i5, 8/256 💻\n"
+    "  🥈 <b>2-o‘rin (1 nafar):</b> Smartfon HONOR X8e, 6/128 GB 📱\n"
+    "  🥉 <b>3-o‘rin (1 nafar):</b> Planshet Samsung Galaxy Tab A9 📱\n"
+    "  🏅 <b>4-o‘rin (1 nafar):</b> Smart televizor (43 dyuymli) 📺\n"
+    "  🏅 <b>5-o‘rin (1 nafar):</b> Smart televizor (32 dyuymli) 📺\n"
     "\n"
     "🏆 G‘oliblar <b>KAPITAL BOOKS</b> tomonidan taqdirlanadi.\n\n"
     "📌 <i>G‘oliblar to‘plangan ballar va sarflangan eng kam vaqt bo‘yicha aniqlanadi.</i>"
