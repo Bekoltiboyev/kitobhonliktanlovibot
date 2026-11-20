@@ -18,9 +18,17 @@ def channel_subscribe_kb() -> InlineKeyboardMarkup:
     )
 
 
+START_BUTTON_TEXT = "/start"
+
+
+def _start_row() -> list:
+    """Barcha pastki menyularning oxirgi qatori: bosilganda bot /start buyrug'ini bajaradi."""
+    return [KeyboardButton(text=START_BUTTON_TEXT)]
+
+
 def phone_request_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 Raqamni yuborish", request_contact=True)]],
+        keyboard=[[KeyboardButton(text="📱 Raqamni yuborish", request_contact=True)], _start_row()],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
@@ -28,14 +36,14 @@ def phone_request_kb() -> ReplyKeyboardMarkup:
 
 def contest_intro_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🎯 Tanlovda ishtirok etish")]],
+        keyboard=[[KeyboardButton(text="🎯 Tanlovda ishtirok etish")], _start_row()],
         resize_keyboard=True,
     )
 
 
 def payment_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Keyingi bosqichga o'tish")]],
+        keyboard=[[KeyboardButton(text="Keyingi bosqichga o'tish")], _start_row()],
         resize_keyboard=True,
     )
 
@@ -117,6 +125,7 @@ def post_approval_kb() -> ReplyKeyboardMarkup:
             [KeyboardButton(text="📖 Kitobni yuklab olish")],
             [KeyboardButton(text="📄 Tanlov nizomi")],
             [KeyboardButton(text="⏳ Testgacha qancha vaqt qoldi?")],
+            _start_row(),
         ],
         resize_keyboard=True,
     )

@@ -38,6 +38,7 @@ async def _show_registration_start(message: Message, state: FSMContext):
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, bot: Bot):
+    await state.clear()   # yarim qolgan jarayon (chek, ism kiritish) bo'lsa, tozalanadi
     user = await db.get_user_by_tg_id(message.from_user.id)
 
     if user and user["is_blocked"]:
@@ -45,6 +46,11 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
         return
 
     if user:
+        # To'lovi tasdiqlangan ishtirokchiga o'z menyusi (kitob, nizom, vaqt) qaytariladi,
+        # aks holda /start uning menyusini "Tanlovda ishtirok etish" bilan almashtirib qo'yardi.
+        if await db.is_participant(user["id"]):
+            await message.answer("🏠 Asosiy menyu 👇", reply_markup=kb.post_approval_kb())
+            return
         await message.answer(
             "Siz allaqachon ro'yxatdan o'tgansiz! 👇",
             reply_markup=kb.contest_intro_kb(),
